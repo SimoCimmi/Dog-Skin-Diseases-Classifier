@@ -1,7 +1,7 @@
 import os
+import platform
 import shutil
 import sys
-import platform
 from pathlib import Path
 
 # Fix per Windows: Cache breve
@@ -47,7 +47,7 @@ def download_dataset() -> None:
 
         # Creazione cartella (assicurati che i genitori esistano)
         dest_path.mkdir(parents=True, exist_ok=True)
-        print(f"📦 Spostamento file...")
+        print("📦 Spostamento file...")
 
         cache_path = Path(cache_path_str)
 

@@ -1,0 +1,81 @@
+stages:
+  # --- PIPELINE 1: Deduplication & Training ---
+  deduplicate_raw:
+    cmd: python src/preprocessing/deduplicate.py --input data/raw --output data/interim/deduplicated
+    deps:
+      - data/raw
+      - src/preprocessing/deduplicate.py
+    outs:
+      - data/interim/deduplicated
+
+  train_p1:
+    foreach: [effnet_v2_s, convnext]
+    do:
+      cmd: python src/train.py --model ${item} --data data/interim/deduplicated --out models/p1/${item}
+      deps:
+        - data/interim/deduplicated
+        - src/train.py
+      metrics:
+        - models/p1/${item}/metrics.json:
+            cache: false
+
+  # --- PIPELINE 2: Data Augmentation ---
+  augment_p2:
+    cmd: python src/preprocessing/augment.py --input data/raw --output data/interim/augmented
+    deps:
+      - data/raw
+      - src/preprocessing/augment.py
+    outs:
+      - data/interim/augmented
+
+  train_p2:
+    foreach: [effnet_v2_s, convnext]
+    do:
+      cmd: python src/train.py --model ${item} --data data/interim/augmented --out models/p2/${item}
+      deps:
+        - data/interim/augmented
+        - src/train.py
+      metrics:
+        - models/p2/${item}/metrics.json:
+            cache: false
+
+  # --- PIPELINE 3: Data Balancing & Fine-Tuning ---
+  balance_p3:
+    cmd: python src/preprocessing/balance.py --input data/raw --output data/interim/balanced
+    deps:
+      - data/raw
+      - src/preprocessing/balance.py
+    outs:
+      - data/interim/balanced
+
+  train_finetune_p3:
+    foreach: [effnet_v2_s, convnext]
+    do:
+      cmd: python src/train_full.py --model ${item} --data data/interim/balanced --finetune True --out models/p3/${item}
+      deps:
+        - data/interim/balanced
+        - src/train_full.py
+      metrics:
+        - models/p3/${item}/metrics.json:
+            cache: false
+
+  # --- PIPELINE 4: Data Augmentation + Data Balancing + Fine-Tuning ---
+  process_p4:
+    cmd: python src/preprocessing/augment.py --input data/raw --output data/tmp_aug && python src/preprocessing/balance.py --input data/tmp_aug --output data/interim/aug_balanced
+    deps:
+      - data/raw
+      - src/preprocessing/augment.py
+      - src/preprocessing/balance.py
+    outs:
+      - data/interim/aug_balanced
+
+  train_p4:
+    foreach: [effnet_v2_s, convnext]
+    do:
+      cmd: python src/train_full.py --model ${item} --data data/interim/aug_balanced --out models/p4/${item}
+      deps:
+        - data/interim/aug_balanced
+        - src/train_full.py
+      metrics:
+        - models/p4/${item}/metrics.json:
+            cache: false
