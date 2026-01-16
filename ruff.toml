@@ -18,9 +18,9 @@ select = [
 ]
 
 ignore = [
-    "D100", # Spesso i docstring nei file __init__.py sono ridondanti
-    "ANN101", # Non serve annotare 'self'
-    "ANN102", # Non serve annotare 'cls'
+    "D100", # Docstring nel modulo (spesso ridondante nei file script)
+    "D203", # Incompatibile con D211 (No blank line before class)
+    "D213", # Incompatibile con D212 (Multi-line summary first line)
 ]
 
 [lint.mccabe]

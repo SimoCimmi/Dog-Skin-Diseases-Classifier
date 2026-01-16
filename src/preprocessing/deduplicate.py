@@ -6,7 +6,7 @@ from pathlib import Path
 
 
 def get_image_hash(filepath: Path) -> str:
-    """Genera un hash MD5 per identificare contenuti identici."""
+    """Genera un hash MD5 per identificare contenuti identici leggendo a chunk."""
     hash_md5 = hashlib.md5()
     with open(filepath, "rb") as f:
         for chunk in iter(lambda: f.read(4096), b""):
@@ -14,16 +14,15 @@ def get_image_hash(filepath: Path) -> str:
     return hash_md5.hexdigest()
 
 
-def find_all_duplicates(root_dir: Path):
-    """Scansiona tutte le sottocartelle (train, test, valid) e mappa gli hash.
-    """
+def find_all_duplicates(root_dir: Path) -> dict[str, list[Path]]:
+    """Scansiona tutte le sottocartelle e mappa gli hash."""
     hashes = defaultdict(list)
-    # Estensioni supportate
-    valid_extensions = {".jpg", ".jpeg", ".png", ".bmp"}
+    # Estensioni comuni
+    valid_extensions = {".jpg", ".jpeg", ".png", ".bmp", ".webp"}
 
     print(f"🔍 Scansione totale in corso su: {root_dir}...")
 
-    # rglob("*") cerca ricorsivamente in tutte le sottocartelle
+    # rglob trova i file indipendentemente dalla profondità
     for file_path in root_dir.rglob("*"):
         if file_path.is_file() and file_path.suffix.lower() in valid_extensions:
             file_hash = get_image_hash(file_path)
@@ -32,64 +31,93 @@ def find_all_duplicates(root_dir: Path):
     return hashes
 
 
-def run_deduplication(input_dir: str, output_dir: str):
+def run_deduplication(input_dir: str, output_dir: str) -> None:
+    """Esegue la deduplicazione applicando logiche severe per evitare data leakage."""
     input_path = Path(input_dir)
     output_path = Path(output_dir)
 
-    # Report stats
+    # Statistiche per il report
     stats = {
-        "same_class_removed": 0,
-        "cross_class_removed": 0,
-        "total_kept": 0
+        "total_images_scanned": 0,
+        "unique_images_kept": 0,
+        "removed_same_split": 0,  # Duplicati ridondanti (es. copia in train)
+        "removed_cross_class": 0,  # Ambiguità (es. img1 in Healthy e in Ringworm)
+        "removed_cross_split": 0,  # DATA LEAKAGE (es. img1 in train e in test)
     }
 
     all_entries = find_all_duplicates(input_path)
 
     if not all_entries:
-        print("Empty dataset.")
+        print("❌ Dataset vuoto o percorso errato.")
         return
 
-    for h, paths in all_entries.items():
-        # Estraiamo le classi (nomi delle cartelle genitrici immediate)
-        # Es: data/raw/train/healthy/img1.jpg -> classe è 'healthy'
-        classes_involved = {p.parent.name for p in paths}
+    stats["total_images_scanned"] = sum(len(paths) for paths in all_entries.values())
 
+    print(f"Immagini trovate: {stats['total_images_scanned']}. Inizio elaborazione...")
+
+    for h, paths in all_entries.items():
+        classes_involved = {p.parent.name for p in paths}
+        splits_involved = {p.parent.parent.name for p in paths}
+
+        # CASO 1: Inconsistenza di Classe
         if len(classes_involved) > 1:
-            # CASO 1: CROSS-CLASS o CROSS-SPLIT DUPLICATES
-            # Eliminiamo tutto per evitare confusione o data leakage
-            stats["cross_class_removed"] += len(paths)
-            print(f"⚠️ Rimosso duplicato inconsistente (Cross-Class): {h}")
+            stats["removed_cross_class"] += len(paths)
             continue
 
-        else:
-            # CASO 2: DUPLICATI NELLA STESSA CLASSE
-            # Ne teniamo solo uno e copiamo quello nella cartella di output
-            keep_path = paths[0]
-            stats["same_class_removed"] += (len(paths) - 1)
-            stats["total_kept"] += 1
+        # CASO 2: Inconsistenza di Split (Data Leakage)
+        if len(splits_involved) > 1:
+            stats["removed_cross_split"] += len(paths)
+            print(
+                f"⚠️ LEAKAGE: Hash {h} in {splits_involved}. Rimossi tutti."
+            )
+            continue
 
-            # Ricostruiamo il percorso relativo per l'output (mantenendo train/test/valid e classe)
-            rel_path = keep_path.relative_to(input_path)
-            dest_file = output_path / rel_path
+        # CASO 3: Duplicati "sicuri"
+        keep_path = paths[0]
+        duplicates_count = len(paths) - 1
+        stats["removed_same_split"] += duplicates_count
+        stats["unique_images_kept"] += 1
 
-            # Crea le cartelle necessarie e copia
-            dest_file.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(keep_path, dest_file)
+        rel_path = keep_path.relative_to(input_path)
+        dest_file = output_path / rel_path
 
-    # Stampa riassunto per il report
-    print("\n" + "=" * 30)
-    print("STATISTICHE DEDUPLICAZIONE")
-    print("=" * 30)
-    print(f"Immagini uniche salvate: {stats['total_kept']}")
-    print(f"Duplicati stessa classe rimossi: {stats['same_class_removed']}")
-    print(f"Inconsistenze cross-class eliminate totalmente: {stats['cross_class_removed']}")
-    print(f"Output salvato in: {output_dir}")
+        dest_file.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(keep_path, dest_file)
+
+    # --- REPORT FINALE PER IL PROGETTO ---
+    print("\n" + "=" * 40)
+    print("📊 REPORT DEDUPLICAZIONE (Pipeline 1)")
+    print("=" * 40)
+    print(f"Totale immagini analizzate:      {stats['total_images_scanned']}")
+    print(f"Immagini valide mantenute:       {stats['unique_images_kept']}")
+    print("-" * 40)
+    print(
+        f"🗑️  Duplicati interni rimossi:    {stats['removed_same_split']} "
+        "(Ridondanza)"
+    )
+    print(
+        f"⛔ Conflict Cross-Class rimossi:  {stats['removed_cross_class']} "
+        "(Etichetta ambigua)"
+    )
+    print(
+        f"☢️  Conflict Cross-Split rimossi:  {stats['removed_cross_split']} "
+        "(DATA LEAKAGE evitato)"
+    )
+    print("=" * 40)
+    print(f"✅ Dataset pulito salvato in: {output_path}")
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--input", type=str, required=True, help="Path alla cartella data/raw")
-    parser.add_argument("--output", type=str, required=True, help="Path alla cartella data/interim/deduplicated")
+    parser.add_argument(
+        "--input", type=str, default="data/raw", help="Input dataset root"
+    )
+    parser.add_argument(
+        "--output",
+        type=str,
+        default="data/deduplicated",
+        help="Output directory",
+    )
     args = parser.parse_args()
 
     run_deduplication(args.input, args.output)

@@ -1,12 +1,12 @@
 stages:
   # --- PIPELINE 1: Deduplication & Training ---
   deduplicate_raw:
-    cmd: python src/preprocessing/deduplicate.py --input data/raw --output data/interim/deduplicated
+    cmd: python src/preprocessing/deduplicate.py --input data/raw --output data/deduplicated
     deps:
       - data/raw
       - src/preprocessing/deduplicate.py
     outs:
-      - data/interim/deduplicated
+      - data/deduplicated
 
   train_p1:
     foreach: [effnet_v2_s, convnext]

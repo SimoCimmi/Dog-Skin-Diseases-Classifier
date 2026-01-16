@@ -29,6 +29,7 @@ def get_long_path(path_str: str) -> str:
 
 
 def download_dataset() -> None:
+    """Scarica il dataset da Kaggle e lo organizza nella cartella raw del progetto."""
     dest_path = DEFAULT_DESTINATION
 
     # Verifica se esiste già

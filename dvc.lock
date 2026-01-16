@@ -1,0 +1,21 @@
+schema: '2.0'
+stages:
+  deduplicate_raw:
+    cmd: python src/preprocessing/deduplicate.py --input data/raw --output 
+      data/deduplicated
+    deps:
+    - path: data/raw
+      hash: md5
+      md5: 44371c03589877ee5c31b6efca871024.dir
+      size: 229860225
+      nfiles: 4315
+    - path: src/preprocessing/deduplicate.py
+      hash: md5
+      md5: 78f2df60ac3af4dcb00ad4d2cf3e1de6
+      size: 4246
+    outs:
+    - path: data/deduplicated
+      hash: md5
+      md5: db9f32631348a916a7a62f219f4c2d0c.dir
+      size: 223518472
+      nfiles: 4203
