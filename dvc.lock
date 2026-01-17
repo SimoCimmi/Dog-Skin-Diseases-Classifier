@@ -38,3 +38,121 @@ stages:
       md5: db9f32631348a916a7a62f219f4c2d0c.dir
       size: 223518472
       nfiles: 4203
+  train_p1@convnext:
+    cmd: python -m src.train --model convnext --train data/deduplicated/train 
+      --val data/deduplicated/valid --out models/p1/convnext --batch 16 --epochs
+      2
+    deps:
+    - path: data/deduplicated/train
+      hash: md5
+      md5: 27526b2d786990f153beb90c49449929.dir
+      size: 156395286
+      nfiles: 2946
+    - path: data/deduplicated/valid
+      hash: md5
+      md5: 4dcd942d3ef5398b1c4c275e82e79962.dir
+      size: 44487134
+      nfiles: 833
+    - path: src/train.py
+      hash: md5
+      md5: a8756bf601cbb03b493b648d975f2dcb
+      size: 5172
+    outs:
+    - path: models/p1/convnext/history.json
+      hash: md5
+      md5: 010ecca7301e6007fd78ef8774ff1c1d
+      size: 173
+    - path: models/p1/convnext/loss_plot.png
+      hash: md5
+      md5: 3bfe519c0269aaa1560b9186061dff00
+      size: 146486
+    - path: models/p1/convnext/model.pth
+      hash: md5
+      md5: 1ec8e161f671130bd37fa9da400e9b49
+      size: 111353691
+  evaluate_p1@convnext:
+    cmd: python -m src.evaluate --model convnext --weights 
+      models/p1/convnext/model.pth --data data/deduplicated/test --out 
+      models/p1/convnext
+    deps:
+    - path: data/deduplicated/test
+      hash: md5
+      md5: e277f2cfdcf62b1beb0b6b001ef2fe06.dir
+      size: 22636052
+      nfiles: 424
+    - path: models/p1/convnext/model.pth
+      hash: md5
+      md5: 1ec8e161f671130bd37fa9da400e9b49
+      size: 111353691
+    - path: src/evaluate.py
+      hash: md5
+      md5: f6cdc5a9a878ac79a9f75b27891bd302
+      size: 3846
+    outs:
+    - path: models/p1/convnext/confusion_matrix.png
+      hash: md5
+      md5: fe338a3ccaae9575ae325762ead541eb
+      size: 154415
+    - path: models/p1/convnext/metrics.json
+      hash: md5
+      md5: 3015bfaff33cbd454d05ba65ca5170c6
+      size: 1814
+  train_p1@effnet_v2_s:
+    cmd: python -m src.train --model effnet_v2_s --train data/deduplicated/train
+      --val data/deduplicated/valid --out models/p1/effnet_v2_s --batch 16 
+      --epochs 2
+    deps:
+    - path: data/deduplicated/train
+      hash: md5
+      md5: 27526b2d786990f153beb90c49449929.dir
+      size: 156395286
+      nfiles: 2946
+    - path: data/deduplicated/valid
+      hash: md5
+      md5: 4dcd942d3ef5398b1c4c275e82e79962.dir
+      size: 44487134
+      nfiles: 833
+    - path: src/train.py
+      hash: md5
+      md5: a8756bf601cbb03b493b648d975f2dcb
+      size: 5172
+    outs:
+    - path: models/p1/effnet_v2_s/history.json
+      hash: md5
+      md5: 32ddb8cbf895cbc86072b67c785ddc2f
+      size: 169
+    - path: models/p1/effnet_v2_s/loss_plot.png
+      hash: md5
+      md5: 08903a2ed52f9196da9845c447fa35db
+      size: 142630
+    - path: models/p1/effnet_v2_s/model.pth
+      hash: md5
+      md5: 7793cfe4596013bb6716146d42d214e8
+      size: 81596987
+  evaluate_p1@effnet_v2_s:
+    cmd: python -m src.evaluate --model effnet_v2_s --weights 
+      models/p1/effnet_v2_s/model.pth --data data/deduplicated/test --out 
+      models/p1/effnet_v2_s
+    deps:
+    - path: data/deduplicated/test
+      hash: md5
+      md5: e277f2cfdcf62b1beb0b6b001ef2fe06.dir
+      size: 22636052
+      nfiles: 424
+    - path: models/p1/effnet_v2_s/model.pth
+      hash: md5
+      md5: 7793cfe4596013bb6716146d42d214e8
+      size: 81596987
+    - path: src/evaluate.py
+      hash: md5
+      md5: f6cdc5a9a878ac79a9f75b27891bd302
+      size: 3846
+    outs:
+    - path: models/p1/effnet_v2_s/confusion_matrix.png
+      hash: md5
+      md5: d4fe240e9fbc5799f9c676b4d41c004e
+      size: 157238
+    - path: models/p1/effnet_v2_s/metrics.json
+      hash: md5
+      md5: 2ac987e9ddb472aa2c95cd87ea94815b
+      size: 1856
