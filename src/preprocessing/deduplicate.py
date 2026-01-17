@@ -110,7 +110,10 @@ def run_deduplication(input_dir: str, output_dir: str) -> None:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--input", type=str, default="data/raw", help="Input dataset root"
+        "--input",
+        type=str,
+        default="data/raw",
+        help="Input dataset root"
     )
     parser.add_argument(
         "--output",

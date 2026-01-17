@@ -9,11 +9,11 @@ stages:
       - data/deduplicated
 
   train_p1:
-    foreach: [effnet_v2_s, convnext]
+    foreach: [ effnet_v2_s, convnext ]
     do:
-      cmd: python src/train.py --model ${item} --data data/interim/deduplicated --out models/p1/${item}
+      cmd: python src/train.py --model ${item} --data data/deduplicated --out models/p1/${item}
       deps:
-        - data/interim/deduplicated
+        - data/deduplicated
         - src/train.py
       metrics:
         - models/p1/${item}/metrics.json:
@@ -21,19 +21,19 @@ stages:
 
   # --- PIPELINE 2: Data Augmentation ---
   augment_p2:
-    cmd: python src/preprocessing/augment.py --input data/raw --output data/interim/augmented
+    cmd: python src/preprocessing/augment.py --input data/deduplicated --output data/augmented
     deps:
-      - data/raw
+      - data/deduplicated
       - src/preprocessing/augment.py
     outs:
-      - data/interim/augmented
+      - data/augmented
 
   train_p2:
     foreach: [effnet_v2_s, convnext]
     do:
-      cmd: python src/train.py --model ${item} --data data/interim/augmented --out models/p2/${item}
+      cmd: python src/train.py --model ${item} --data data/augmented --out models/p2/${item}
       deps:
-        - data/interim/augmented
+        - data/augmented
         - src/train.py
       metrics:
         - models/p2/${item}/metrics.json:
