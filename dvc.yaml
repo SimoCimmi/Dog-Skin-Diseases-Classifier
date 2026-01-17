@@ -1,6 +1,7 @@
 stages:
-  # --- PIPELINE 1: Deduplication & Training ---
-  deduplicate_raw:
+  # --- STAGE 0: COMMON BASE (Deduplication) ---
+  # Mantiene la struttura train/test ma rimuove i duplicati e controlla il leakage
+  deduplicate:
     cmd: python src/preprocessing/deduplicate.py --input data/raw --output data/deduplicated
     deps:
       - data/raw
@@ -8,74 +9,165 @@ stages:
     outs:
       - data/deduplicated
 
+  # =======================================================
+  # PIPELINE 1: BASELINE (Raw Clean Data)
+  # =======================================================
   train_p1:
-    foreach: [ effnet_v2_s, convnext ]
+    foreach: [effnet_v2_s, convnext]
     do:
-      cmd: python src/train.py --model ${item} --data data/deduplicated --out models/p1/${item}
+      # Trainiamo su deduplicated/train
+      cmd: python -m src.train --model ${item} --data data/deduplicated/train --out models/p1/${item} --batch 16 --epochs 20
       deps:
         - data/deduplicated
         - src/train.py
+      outs:
+        - models/p1/${item}/model.pth
+        - models/p1/${item}/loss_plot.png
+        - models/p1/${item}/history.json
+
+  evaluate_p1:
+    foreach: [effnet_v2_s, convnext]
+    do:
+      # Valutiamo su deduplicated/test (GOLDEN SET)
+      cmd: python -m src.evaluate --model ${item} --weights models/p1/${item}/model.pth --data data/deduplicated/test --out models/p1/${item}
+      deps:
+        - data/deduplicated
+        - src/evaluate.py
+        - models/p1/${item}/model.pth
       metrics:
         - models/p1/${item}/metrics.json:
             cache: false
+      plots:
+        - models/p1/${item}/confusion_matrix.png:
+            cache: false
 
-  # --- PIPELINE 2: Data Augmentation ---
+  # =======================================================
+  # PIPELINE 2: DATA AUGMENTATION
+  # =======================================================
   augment_p2:
-    cmd: python src/preprocessing/augment.py --input data/deduplicated --output data/augmented
+    # Augmentiamo SOLO il train set. Il test set non si tocca.
+    cmd: python src/preprocessing/augment.py --input data/deduplicated/train --output data/augmented/train
     deps:
       - data/deduplicated
       - src/preprocessing/augment.py
     outs:
-      - data/augmented
+      - data/augmented/train
 
   train_p2:
     foreach: [effnet_v2_s, convnext]
     do:
-      cmd: python src/train.py --model ${item} --data data/augmented --out models/p2/${item}
+      # Train su augmented/train
+      cmd: python -m src.train --model ${item} --data data/augmented/train --out models/p2/${item} --batch 16 --epochs 20
       deps:
-        - data/augmented
+        - data/augmented/train
         - src/train.py
+      outs:
+        - models/p2/${item}/model.pth
+        - models/p2/${item}/loss_plot.png
+        - models/p2/${item}/history.json
+
+  evaluate_p2:
+    foreach: [effnet_v2_s, convnext]
+    do:
+      # IMPORTANTE: Valutiamo sempre su deduplicated/test (non aumentato) per confronto equo
+      cmd: python -m src.evaluate --model ${item} --weights models/p2/${item}/model.pth --data data/deduplicated/test --out models/p2/${item}
+      deps:
+        - data/deduplicated # Dipendenza dal test set pulito
+        - src/evaluate.py
+        - models/p2/${item}/model.pth
       metrics:
         - models/p2/${item}/metrics.json:
             cache: false
+      plots:
+        - models/p2/${item}/confusion_matrix.png:
+            cache: false
 
-  # --- PIPELINE 3: Data Balancing & Fine-Tuning ---
+  # =======================================================
+  # PIPELINE 3: BALANCING & FINE-TUNING
+  # =======================================================
   balance_p3:
-    cmd: python src/preprocessing/balance.py --input data/raw --output data/interim/balanced
+    # Bilanciamo SOLO il train set
+    cmd: python src/preprocessing/balance.py --input data/deduplicated/train --output data/balanced/train
     deps:
-      - data/raw
+      - data/deduplicated
       - src/preprocessing/balance.py
     outs:
-      - data/interim/balanced
+      - data/balanced/train
 
-  train_finetune_p3:
+  train_p3:
     foreach: [effnet_v2_s, convnext]
     do:
-      cmd: python src/train_full.py --model ${item} --data data/interim/balanced --finetune True --out models/p3/${item}
+      # Attiviamo flag --finetune
+      cmd: python -m src.train --model ${item} --data data/balanced/train --out models/p3/${item} --finetune True --batch 16 --epochs 20
       deps:
-        - data/interim/balanced
-        - src/train_full.py
+        - data/balanced/train
+        - src/train.py
+      outs:
+        - models/p3/${item}/model.pth
+        - models/p3/${item}/loss_plot.png
+        - models/p3/${item}/history.json
+
+  evaluate_p3:
+    foreach: [effnet_v2_s, convnext]
+    do:
+      # Valutazione sempre su deduplicated/test
+      cmd: python -m src.evaluate --model ${item} --weights models/p3/${item}/model.pth --data data/deduplicated/test --out models/p3/${item}
+      deps:
+        - data/deduplicated
+        - src/evaluate.py
+        - models/p3/${item}/model.pth
       metrics:
         - models/p3/${item}/metrics.json:
             cache: false
+      plots:
+        - models/p3/${item}/confusion_matrix.png:
+            cache: false
 
-  # --- PIPELINE 4: Data Augmentation + Data Balancing + Fine-Tuning ---
-  process_p4:
-    cmd: python src/preprocessing/augment.py --input data/raw --output data/tmp_aug && python src/preprocessing/balance.py --input data/tmp_aug --output data/interim/aug_balanced
+  # =======================================================
+  # PIPELINE 4: HYBRID (Augment -> Balance -> Train)
+  # =======================================================
+  augment_p4:
+    # Step 1: Augmentation del train
+    cmd: python src/preprocessing/augment.py --input data/deduplicated/train --output data/tmp/p4_aug
     deps:
-      - data/raw
+      - data/deduplicated
       - src/preprocessing/augment.py
+    outs:
+      - data/tmp/p4_aug
+
+  balance_p4:
+    # Step 2: Balancing sul dataset già aumentato
+    cmd: python src/preprocessing/balance.py --input data/tmp/p4_aug --output data/hybrid/train
+    deps:
+      - data/tmp/p4_aug
       - src/preprocessing/balance.py
     outs:
-      - data/interim/aug_balanced
+      - data/hybrid/train
 
   train_p4:
     foreach: [effnet_v2_s, convnext]
     do:
-      cmd: python src/train_full.py --model ${item} --data data/interim/aug_balanced --out models/p4/${item}
+      cmd: python -m src.train --model ${item} --data data/hybrid/train --out models/p4/${item} --batch 16 --epochs 20
       deps:
-        - data/interim/aug_balanced
-        - src/train_full.py
+        - data/hybrid/train
+        - src/train.py
+      outs:
+        - models/p4/${item}/model.pth
+        - models/p4/${item}/loss_plot.png
+        - models/p4/${item}/history.json
+
+  evaluate_p4:
+    foreach: [effnet_v2_s, convnext]
+    do:
+      # Valutazione finale su deduplicated/test
+      cmd: python -m src.evaluate --model ${item} --weights models/p4/${item}/model.pth --data data/deduplicated/test --out models/p4/${item}
+      deps:
+        - data/deduplicated
+        - src/evaluate.py
+        - models/p4/${item}/model.pth
       metrics:
         - models/p4/${item}/metrics.json:
+            cache: false
+      plots:
+        - models/p4/${item}/confusion_matrix.png:
             cache: false
