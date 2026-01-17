@@ -1,3 +1,4 @@
+import argparse
 from pathlib import Path
 from typing import Final
 
@@ -199,16 +200,48 @@ class SkinDetectorEDA:
 
 
 if __name__ == "__main__":
-    # Setup dinamico dei path
+    # Setup dinamico dei path di base
     current_file = Path(__file__).resolve()
     project_root = current_file.parent.parent  # Sale da src/ a root
 
-    raw_data_path = project_root / "data" / "raw"
-    reports_path = project_root / "reports" / "eda"  # Creiamo una sottocartella eda
+    # Configurazione Argparse per flessibilità da riga di comando
+    parser = argparse.ArgumentParser(description="Esegui EDA su una specifica cartella dati.")
 
-    if not raw_data_path.exists():
-        print(f"[-] Error: Could not find data at {raw_data_path}")
-        print("    Ensure you are running this from the project root or src folder.")
+    # Argomento 1: Cartella di input (default: data/raw)
+    parser.add_argument(
+        "--input",
+        type=str,
+        default=str(project_root / "data" / "raw"),
+        help="Path alla cartella contenente il dataset (es. data/raw o data/deduplicated)"
+    )
+
+    # Argomento 2: Cartella di output report (opzionale)
+    parser.add_argument(
+        "--output",
+        type=str,
+        default=None,
+        help="Path dove salvare i report. Se vuoto, crea una cartella automatica in reports/"
+    )
+
+    args = parser.parse_args()
+
+    # Conversione in oggetti Path
+    input_path = Path(args.input)
+
+    # Se l'utente non specifica l'output, lo creiamo basandoci sul nome della cartella input
+    # Es: se input è 'data/deduplicated', output sarà 'reports/eda_deduplicated'
+    if args.output:
+        report_path = Path(args.output)
     else:
-        eda = SkinDetectorEDA(raw_data_path, reports_path)
+        folder_name = input_path.name  # es. 'raw' o 'deduplicated'
+        report_path = project_root / "reports" / f"eda_{folder_name}"
+
+    if not input_path.exists():
+        print(f"[-] Error: Could not find data at {input_path}")
+        print("    Check the path or run from project root.")
+    else:
+        print(f"[*] Analyzing dataset: {input_path}")
+        print(f"[*] Saving reports to: {report_path}")
+
+        eda = SkinDetectorEDA(input_path, report_path)
         eda.run_full_analysis()

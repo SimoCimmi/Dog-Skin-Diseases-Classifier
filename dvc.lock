@@ -19,3 +19,22 @@ stages:
       md5: db9f32631348a916a7a62f219f4c2d0c.dir
       size: 223518472
       nfiles: 4203
+  deduplicate:
+    cmd: python src/preprocessing/deduplicate.py --input data/raw --output 
+      data/deduplicated
+    deps:
+    - path: data/raw
+      hash: md5
+      md5: 44371c03589877ee5c31b6efca871024.dir
+      size: 229860225
+      nfiles: 4315
+    - path: src/preprocessing/deduplicate.py
+      hash: md5
+      md5: a443b5b5162a8dc76506f1b41e7bbcdf
+      size: 4273
+    outs:
+    - path: data/deduplicated
+      hash: md5
+      md5: db9f32631348a916a7a62f219f4c2d0c.dir
+      size: 223518472
+      nfiles: 4203
