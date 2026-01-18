@@ -1,6 +1,6 @@
 stages:
   # --- STAGE 0: COMMON BASE (Deduplication) ---
-  # Mantiene la struttura train/test ma rimuove i duplicati e controlla il leakage
+  # Rimuove i duplicati mantenendo la struttura train/val/test
   deduplicate:
     cmd: python src/preprocessing/deduplicate.py --input data/raw --output data/deduplicated
     deps:
@@ -15,10 +15,11 @@ stages:
   train_p1:
     foreach: [effnet_v2_s, convnext]
     do:
-      # Trainiamo su deduplicated/train
-      cmd: python -m src.train --model ${item} --data data/deduplicated/train --out models/p1/${item} --batch 16 --epochs 20
+      # Uso: Train pulito, Valid pulito
+      cmd: python -m src.train --model ${item} --train data/deduplicated/train --val data/deduplicated/valid --out models/p1/${item} --batch 16 --epochs 2
       deps:
-        - data/deduplicated
+        - data/deduplicated/train
+        - data/deduplicated/valid
         - src/train.py
       outs:
         - models/p1/${item}/model.pth
@@ -28,10 +29,10 @@ stages:
   evaluate_p1:
     foreach: [effnet_v2_s, convnext]
     do:
-      # Valutiamo su deduplicated/test (GOLDEN SET)
+      # Valutazione finale su Test Set pulito
       cmd: python -m src.evaluate --model ${item} --weights models/p1/${item}/model.pth --data data/deduplicated/test --out models/p1/${item}
       deps:
-        - data/deduplicated
+        - data/deduplicated/test
         - src/evaluate.py
         - models/p1/${item}/model.pth
       metrics:
@@ -45,10 +46,10 @@ stages:
   # PIPELINE 2: DATA AUGMENTATION
   # =======================================================
   augment_p2:
-    # Augmentiamo SOLO il train set. Il test set non si tocca.
+    # Aumentiamo SOLO il train set
     cmd: python src/preprocessing/augment.py --input data/deduplicated/train --output data/augmented/train
     deps:
-      - data/deduplicated
+      - data/deduplicated/train
       - src/preprocessing/augment.py
     outs:
       - data/augmented/train
@@ -56,10 +57,11 @@ stages:
   train_p2:
     foreach: [effnet_v2_s, convnext]
     do:
-      # Train su augmented/train
-      cmd: python -m src.train --model ${item} --data data/augmented/train --out models/p2/${item} --batch 16 --epochs 20
+      # Uso: Train AUMENTATO, ma Valid PULITO (fondamentale per controllo reale)
+      cmd: python -m src.train --model ${item} --train data/augmented/train --val data/deduplicated/valid --out models/p2/${item} --batch 16 --epochs 20
       deps:
         - data/augmented/train
+        - data/deduplicated/valid
         - src/train.py
       outs:
         - models/p2/${item}/model.pth
@@ -69,10 +71,9 @@ stages:
   evaluate_p2:
     foreach: [effnet_v2_s, convnext]
     do:
-      # IMPORTANTE: Valutiamo sempre su deduplicated/test (non aumentato) per confronto equo
       cmd: python -m src.evaluate --model ${item} --weights models/p2/${item}/model.pth --data data/deduplicated/test --out models/p2/${item}
       deps:
-        - data/deduplicated # Dipendenza dal test set pulito
+        - data/deduplicated/test
         - src/evaluate.py
         - models/p2/${item}/model.pth
       metrics:
@@ -83,13 +84,13 @@ stages:
             cache: false
 
   # =======================================================
-  # PIPELINE 3: BALANCING & FINE-TUNING
+  # PIPELINE 3: BALANCING
   # =======================================================
   balance_p3:
-    # Bilanciamo SOLO il train set
+    # Bilanciamo solo il train set
     cmd: python src/preprocessing/balance.py --input data/deduplicated/train --output data/balanced/train
     deps:
-      - data/deduplicated
+      - data/deduplicated/train
       - src/preprocessing/balance.py
     outs:
       - data/balanced/train
@@ -97,10 +98,12 @@ stages:
   train_p3:
     foreach: [effnet_v2_s, convnext]
     do:
-      # Attiviamo flag --finetune
-      cmd: python -m src.train --model ${item} --data data/balanced/train --out models/p3/${item} --finetune True --batch 16 --epochs 20
+      # Uso: Train BILANCIATO, Valid PULITO
+      # Nota: Ho rimosso --finetune True perché lo gestisci tu nel codice o se lo vuoi aggiungere come flag in train.py
+      cmd: python -m src.train --model ${item} --train data/balanced/train --val data/deduplicated/valid --out models/p3/${item} --batch 16 --epochs 20
       deps:
         - data/balanced/train
+        - data/deduplicated/valid
         - src/train.py
       outs:
         - models/p3/${item}/model.pth
@@ -110,10 +113,9 @@ stages:
   evaluate_p3:
     foreach: [effnet_v2_s, convnext]
     do:
-      # Valutazione sempre su deduplicated/test
       cmd: python -m src.evaluate --model ${item} --weights models/p3/${item}/model.pth --data data/deduplicated/test --out models/p3/${item}
       deps:
-        - data/deduplicated
+        - data/deduplicated/test
         - src/evaluate.py
         - models/p3/${item}/model.pth
       metrics:
@@ -124,19 +126,19 @@ stages:
             cache: false
 
   # =======================================================
-  # PIPELINE 4: HYBRID (Augment -> Balance -> Train)
+  # PIPELINE 4: HYBRID (Augment -> Balance)
   # =======================================================
   augment_p4:
-    # Step 1: Augmentation del train
+    # Step 1: Augmentation del train originale
     cmd: python src/preprocessing/augment.py --input data/deduplicated/train --output data/tmp/p4_aug
     deps:
-      - data/deduplicated
+      - data/deduplicated/train
       - src/preprocessing/augment.py
     outs:
       - data/tmp/p4_aug
 
   balance_p4:
-    # Step 2: Balancing sul dataset già aumentato
+    # Step 2: Balancing sul dataset aumentato
     cmd: python src/preprocessing/balance.py --input data/tmp/p4_aug --output data/hybrid/train
     deps:
       - data/tmp/p4_aug
@@ -147,9 +149,11 @@ stages:
   train_p4:
     foreach: [effnet_v2_s, convnext]
     do:
-      cmd: python -m src.train --model ${item} --data data/hybrid/train --out models/p4/${item} --batch 16 --epochs 20
+      # Uso: Train IBRIDO, Valid PULITO
+      cmd: python -m src.train --model ${item} --train data/hybrid/train --val data/deduplicated/valid --out models/p4/${item} --batch 16 --epochs 20
       deps:
         - data/hybrid/train
+        - data/deduplicated/valid
         - src/train.py
       outs:
         - models/p4/${item}/model.pth
@@ -159,10 +163,9 @@ stages:
   evaluate_p4:
     foreach: [effnet_v2_s, convnext]
     do:
-      # Valutazione finale su deduplicated/test
       cmd: python -m src.evaluate --model ${item} --weights models/p4/${item}/model.pth --data data/deduplicated/test --out models/p4/${item}
       deps:
-        - data/deduplicated
+        - data/deduplicated/test
         - src/evaluate.py
         - models/p4/${item}/model.pth
       metrics:
