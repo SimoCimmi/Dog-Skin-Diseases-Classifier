@@ -205,14 +205,16 @@ if __name__ == "__main__":
     project_root = current_file.parent.parent  # Sale da src/ a root
 
     # Configurazione Argparse per flessibilità da riga di comando
-    parser = argparse.ArgumentParser(description="Esegui EDA su una specifica cartella dati.")
+    parser = argparse.ArgumentParser(description="Esegui EDA su "
+                                                 "una specifica cartella dati.")
 
     # Argomento 1: Cartella di input (default: data/raw)
     parser.add_argument(
         "--input",
         type=str,
         default=str(project_root / "data" / "raw"),
-        help="Path alla cartella contenente il dataset (es. data/raw o data/deduplicated)"
+        help="Path alla cartella contenente il dataset "
+             "(es. data/raw o data/deduplicated)"
     )
 
     # Argomento 2: Cartella di output report (opzionale)
@@ -220,7 +222,8 @@ if __name__ == "__main__":
         "--output",
         type=str,
         default=None,
-        help="Path dove salvare i report. Se vuoto, crea una cartella automatica in reports/"
+        help="Path dove salvare i report. Se vuoto, crea una cartella"
+             " automatica in reports/"
     )
 
     args = parser.parse_args()
@@ -228,8 +231,9 @@ if __name__ == "__main__":
     # Conversione in oggetti Path
     input_path = Path(args.input)
 
-    # Se l'utente non specifica l'output, lo creiamo basandoci sul nome della cartella input
-    # Es: se input è 'data/deduplicated', output sarà 'reports/eda_deduplicated'
+    # Se l'utente non specifica l'output, lo creiamo basandoci sul nome
+    # della cartella input. Es: se input è 'data/deduplicated', output
+    # sarà 'reports/eda_deduplicated'
     if args.output:
         report_path = Path(args.output)
     else:
