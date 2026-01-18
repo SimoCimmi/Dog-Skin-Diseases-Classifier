@@ -58,7 +58,7 @@ def get_loader(
         dataset,
         batch_size=batch_size,
         shuffle=shuffle,
-        num_workers=4 if os.name != 'nt' else 0,  # Su Windows a volte workers>0 dà problemi
+        num_workers=4 if os.name != 'nt' else 0,
         pin_memory=True if torch.cuda.is_available() else False
     )
 

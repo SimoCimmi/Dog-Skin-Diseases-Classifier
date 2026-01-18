@@ -1,31 +1,45 @@
-"""Script di valutazione P1: calcola metriche dettagliate e matrice di confusione."""
+"""Evaluation script for P1: calculates detailed metrics and confusion matrix."""
 
 import argparse
 import json
 from pathlib import Path
-from typing import Any, Dict, List, cast
+from typing import Any, Dict, List, Tuple, cast
 
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
 import torch
 from sklearn.metrics import classification_report, confusion_matrix
+from torch.utils.data import DataLoader
 from torchvision.datasets import ImageFolder
 from tqdm import tqdm
 
 from src.common import DEVICE, get_loader, get_model
 
 
-def evaluate(model: torch.nn.Module, loader: torch.utils.data.DataLoader):
-    """Esegue l'inferenza e restituisce etichette reali e predette."""
+def evaluate(
+    model: torch.nn.Module, loader: DataLoader
+) -> Tuple[np.ndarray, np.ndarray]:
+    """Execute inference and return true and predicted labels.
+
+    Args:
+        model: The trained neural network model.
+        loader: DataLoader for the test set.
+
+    Returns:
+        A tuple containing (true_labels, predicted_labels).
+
+    """
     model.eval()
     all_preds = []
     all_labels = []
 
     with torch.no_grad():
         for inputs, labels in tqdm(loader, desc="Evaluating"):
-            inputs = inputs.to(DEVICE)
-            outputs = model(inputs)
+            # Soluzione PLW2901: usa un nome diverso per l'input spostato sul device
+            imgs = inputs.to(DEVICE)
+            outputs = model(imgs)
+
             # Ottiene la classe con probabilità maggiore
             _, preds = torch.max(outputs, 1)
 
@@ -35,34 +49,49 @@ def evaluate(model: torch.nn.Module, loader: torch.utils.data.DataLoader):
     return np.array(all_labels), np.array(all_preds)
 
 
-def plot_confusion_matrix(y_true, y_pred, classes: List[str], out_path: Path):
-    """Genera e salva una matrice di confusione estetica."""
+def plot_confusion_matrix(
+    y_true: np.ndarray, y_pred: np.ndarray, classes: List[str], out_path: Path
+) -> None:
+    """Generate and save an aesthetic confusion matrix plot.
+
+    Args:
+        y_true: Ground truth labels.
+        y_pred: Predicted labels from the model.
+        classes: List of class names for axis labels.
+        out_path: Full path where the image will be saved.
+
+    """
     cm = confusion_matrix(y_true, y_pred)
 
     plt.figure(figsize=(10, 8))
     sns.heatmap(
         cm,
         annot=True,
-        fmt='d',
-        cmap='Blues',
+        fmt="d",
+        cmap="Blues",
         xticklabels=classes,
         yticklabels=classes
     )
-    plt.xlabel('Predicted Label')
-    plt.ylabel('True Label')
-    plt.title('Confusion Matrix')
+    plt.xlabel("Predicted Label")
+    plt.ylabel("True Label")
+    plt.title("Confusion Matrix")
     plt.tight_layout()
     plt.savefig(out_path, dpi=300)
     plt.close()
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--model", type=str, required=True)
-    parser.add_argument("--weights", type=str, required=True, help="Path to model.pth")
-    parser.add_argument("--data", type=str, required=True, help="Path to test folder")
-    parser.add_argument("--out", type=str, required=True)
-    parser.add_argument("--batch", type=int, default=16)
+    """Run the evaluation pipeline and save metrics and plots."""
+    parser = argparse.ArgumentParser(description="P1 Evaluation Stage")
+    parser.add_argument("--model", type=str, required=True, help="Model architecture")
+    parser.add_argument(
+        "--weights", type=str, required=True, help="Path to model.pth"
+    )
+    parser.add_argument(
+        "--data", type=str, required=True, help="Path to test folder"
+    )
+    parser.add_argument("--out", type=str, required=True, help="Output directory")
+    parser.add_argument("--batch", type=int, default=16, help="Batch size")
     args = parser.parse_args()
 
     out_dir = Path(args.out)
@@ -71,7 +100,7 @@ def main() -> None:
     # 1. Load Data
     loader = get_loader(Path(args.data), args.batch, shuffle=False, is_train=False)
 
-    # Diciamo all'IDE che il dataset dentro il loader è sicuramente un ImageFolder
+    # Cast esplicito per rassicurare il linter sul tipo di dataset
     dataset = cast(ImageFolder, loader.dataset)
     classes = dataset.classes
 
@@ -85,7 +114,6 @@ def main() -> None:
     y_true, y_pred = evaluate(model, loader)
 
     # 4. Calculate Metrics
-    # Questo risolve "Unexpected type(s):(str)..." dicendo che report è un dizionario
     report: Dict[str, Any] = classification_report(
         y_true, y_pred, target_names=classes, output_dict=True
     )
@@ -96,10 +124,13 @@ def main() -> None:
         "f1_score_weighted": report["weighted avg"]["f1-score"],
         "precision_weighted": report["weighted avg"]["precision"],
         "recall_weighted": report["weighted avg"]["recall"],
-        "per_class": report  # Salviamo tutto il dettaglio
+        "per_class": report
     }
 
-    print(f"[*] Accuracy: {metrics['accuracy']:.4f} | F1 (Weighted): {metrics['f1_score_weighted']:.4f}")
+    print(
+        f"[*] Accuracy: {metrics['accuracy']:.4f} | "
+        f"F1 (Weighted): {metrics['f1_score_weighted']:.4f}"
+    )
 
     # 5. Save Artifacts
     with open(out_dir / "metrics.json", "w") as f:

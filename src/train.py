@@ -1,4 +1,4 @@
-"""Script di training P1 con AMP, loss tracking e salvataggio del miglior modello."""
+"""Training script for P1 with AMP, loss tracking, and best model saving."""
 
 import argparse
 import json
@@ -9,48 +9,75 @@ from typing import Dict, List
 import matplotlib.pyplot as plt
 import torch
 from torch import amp, nn, optim
+from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 from src.common import DEVICE, get_loader, get_model
 
 
-def validate(model: nn.Module, loader: torch.utils.data.DataLoader, criterion: nn.Module) -> float:
-    """Calcola la loss media sul validation set."""
+def validate(
+    model: nn.Module, loader: DataLoader, criterion: nn.Module
+) -> float:
+    """Calculate average loss on the validation set.
+
+    Args:
+        model: The neural network model.
+        loader: DataLoader for the validation set.
+        criterion: Loss function.
+
+    Returns:
+        The average loss.
+
+    """
     model.eval()
     running_loss = 0.0
 
     with torch.no_grad():
         for images, targets in loader:
-            images, targets = images.to(DEVICE), targets.to(DEVICE)
-            outputs = model(images)
-            loss = criterion(outputs, targets)
+            # Soluzione PLW2901: nomi diversi per evitare l'overwriting
+            imgs, lbls = images.to(DEVICE), targets.to(DEVICE)
+            outputs = model(imgs)
+            loss = criterion(outputs, lbls)
             running_loss += loss.item() * images.size(0)
 
     return running_loss / len(loader.dataset)
 
 
 def train_one_epoch(
-        model: nn.Module,
-        loader: torch.utils.data.DataLoader,
-        criterion: nn.Module,
-        optimizer: optim.Optimizer,
-        scaler: amp.GradScaler,
+    model: nn.Module,
+    loader: DataLoader,
+    criterion: nn.Module,
+    optimizer: optim.Optimizer,
+    scaler: amp.GradScaler,
 ) -> float:
-    """Esegue un'epoca di training con Mixed Precision."""
+    """Perform one training epoch using Mixed Precision.
+
+    Args:
+        model: The neural network model.
+        loader: DataLoader for the training set.
+        criterion: Loss function.
+        optimizer: Optimization algorithm.
+        scaler: AMP GradScaler for stable training.
+
+    Returns:
+        The average training loss for the epoch.
+
+    """
     model.train()
     running_loss = 0.0
 
-    # Tqdm per barra di avanzamento
     pbar = tqdm(loader, desc="Training", leave=False)
 
     for images, targets in pbar:
-        images, targets = images.to(DEVICE), targets.to(DEVICE)
+        # Soluzione PLW2901: nomi diversi per le variabili inviate al device
+        imgs, lbls = images.to(DEVICE), targets.to(DEVICE)
 
-        optimizer.zero_grad(set_to_none=True)  # set_to_none è più veloce di zero_grad
+        optimizer.zero_grad(set_to_none=True)
 
-        with amp.autocast(device_type="cuda"):
-            outputs = model(images)
-            loss = criterion(outputs, targets)
+        device_type = "cuda" if torch.cuda.is_available() else "cpu"
+        with amp.autocast(device_type=device_type):
+            outputs = model(imgs)
+            loss = criterion(outputs, lbls)
 
         scaler.scale(loss).backward()
         scaler.step(optimizer)
@@ -63,7 +90,13 @@ def train_one_epoch(
 
 
 def save_loss_plot(history: Dict[str, List[float]], out_dir: Path) -> None:
-    """Genera il grafico Training vs Validation Loss."""
+    """Generate and save the Training vs Validation Loss plot.
+
+    Args:
+        history: Dictionary containing loss lists.
+        out_dir: Directory where the plot will be saved.
+
+    """
     plt.figure(figsize=(10, 6))
     plt.plot(history["train_loss"], label="Training Loss", linewidth=2)
     plt.plot(history["val_loss"], label="Validation Loss", linewidth=2, linestyle="--")
@@ -77,40 +110,36 @@ def save_loss_plot(history: Dict[str, List[float]], out_dir: Path) -> None:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--model", type=str, required=True)
-    # Ora accettiamo percorsi distinti per train e validation
-    parser.add_argument("--train", type=str, required=True, help="Path to training folder")
-    parser.add_argument("--val", type=str, required=True, help="Path to validation folder")
-    parser.add_argument("--out", type=str, required=True)
-    parser.add_argument("--batch", type=int, default=16)
-    parser.add_argument("--epochs", type=int, default=20)
+    """Entry point for the training script."""
+    parser = argparse.ArgumentParser(description="P1 Training Script")
+    parser.add_argument("--model", type=str, required=True, help="Model architecture")
+    parser.add_argument("--train", type=str, required=True, help="Path to train folder")
+    parser.add_argument("--val", type=str, required=True, help="Path to val folder")
+    parser.add_argument("--out", type=str, required=True, help="Output directory")
+    parser.add_argument("--batch", type=int, default=16, help="Batch size")
+    parser.add_argument("--epochs", type=int, default=20, help="Number of epochs")
     args = parser.parse_args()
 
     out_dir = Path(args.out)
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    # 1. Setup Dataloaders
-    print(f"[*] Loading data from: {args.train} (Train) / {args.val} (Val)")
+    print(f"[*] Loading data: {args.train} (Train) / {args.val} (Val)")
     train_loader = get_loader(Path(args.train), args.batch, shuffle=True, is_train=True)
     val_loader = get_loader(Path(args.val), args.batch, shuffle=False, is_train=False)
 
     classes = train_loader.dataset.classes
     print(f"[*] Detected {len(classes)} classes: {classes}")
 
-    # 2. Setup Model & Training Components
     model = get_model(args.model, len(classes))
 
-    # Label Smoothing aiuta con dataset rumorosi/medici
     criterion = nn.CrossEntropyLoss(label_smoothing=0.1)
-    optimizer = optim.AdamW(model.parameters(), lr=1e-4, weight_decay=1e-4)  # AdamW è meglio di Adam standard
-    scaler = amp.GradScaler()  # Fondamentale per 8GB VRAM
+    optimizer = optim.AdamW(model.parameters(), lr=1e-4, weight_decay=1e-4)
+    scaler = amp.GradScaler()
 
-    history = {"train_loss": [], "val_loss": []}
+    history: Dict[str, List[float]] = {"train_loss": [], "val_loss": []}
     best_val_loss = float("inf")
     start_time = time.time()
 
-    # 3. Training Loop
     print(f"[*] Starting training for {args.epochs} epochs on {DEVICE}...")
 
     for epoch in range(args.epochs):
@@ -120,11 +149,10 @@ def main() -> None:
         history["train_loss"].append(t_loss)
         history["val_loss"].append(v_loss)
 
-        # Logic: Save BEST model only
         if v_loss < best_val_loss:
             best_val_loss = v_loss
             torch.save(model.state_dict(), out_dir / "model.pth")
-            saved_msg = "(*)"  # Indicatore visuale
+            saved_msg = "(*)"
         else:
             saved_msg = ""
 
@@ -135,9 +163,9 @@ def main() -> None:
         )
 
     total_time = (time.time() - start_time) / 60
-    print(f"[*] Training complete in {total_time:.1f} min. Best Val Loss: {best_val_loss:.4f}")
+    print(f"[*] Training complete in {total_time:.1f} min. "
+          f"Best Val Loss: {best_val_loss:.4f}")
 
-    # 4. Save Artifacts
     save_loss_plot(history, out_dir)
     with open(out_dir / "history.json", "w") as f:
         json.dump(history, f, indent=4)
