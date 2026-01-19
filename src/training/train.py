@@ -1,16 +1,17 @@
-"""Training script for P1 with AMP, loss tracking, and best model saving."""
+"""Training script for P1/P2 with AMP, loss tracking, and best model saving."""
 
 import argparse
 import json
 import time
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, cast, Sized
 
 import matplotlib.pyplot as plt
 import torch
 from torch import amp, nn, optim
 from torch.utils.data import DataLoader
 from tqdm import tqdm
+from torchvision.datasets import ImageFolder
 
 from src.training.common import DEVICE, get_loader, get_model
 
@@ -18,29 +19,24 @@ from src.training.common import DEVICE, get_loader, get_model
 def validate(
     model: nn.Module, loader: DataLoader, criterion: nn.Module
 ) -> float:
-    """Calculate average loss on the validation set.
-
-    Args:
-        model: The neural network model.
-        loader: DataLoader for the validation set.
-        criterion: Loss function.
-
-    Returns:
-        The average loss.
-
-    """
+    """Calculate average loss on the validation set."""
     model.eval()
     running_loss = 0.0
 
     with torch.no_grad():
         for images, targets in loader:
-            # Soluzione PLW2901: nomi diversi per evitare l'overwriting
             imgs, lbls = images.to(DEVICE), targets.to(DEVICE)
-            outputs = model(imgs)
-            loss = criterion(outputs, lbls)
+
+            # Autocast anche in validazione per coerenza
+            with amp.autocast(device_type="cuda" if torch.cuda.is_available() else "cpu"):
+                outputs = model(imgs)
+                loss = criterion(outputs, lbls)
+
             running_loss += loss.item() * images.size(0)
 
-    return running_loss / len(loader.dataset)
+    # Casting per evitare warning IDE "Expected Sized"
+    num_samples = len(cast(Sized, cast(object, loader.dataset)))
+    return running_loss / num_samples
 
 
 def train_one_epoch(
@@ -50,26 +46,13 @@ def train_one_epoch(
     optimizer: optim.Optimizer,
     scaler: amp.GradScaler,
 ) -> float:
-    """Perform one training epoch using Mixed Precision.
-
-    Args:
-        model: The neural network model.
-        loader: DataLoader for the training set.
-        criterion: Loss function.
-        optimizer: Optimization algorithm.
-        scaler: AMP GradScaler for stable training.
-
-    Returns:
-        The average training loss for the epoch.
-
-    """
+    """Perform one training epoch using Mixed Precision."""
     model.train()
     running_loss = 0.0
 
     pbar = tqdm(loader, desc="Training", leave=False)
 
     for images, targets in pbar:
-        # Soluzione PLW2901: nomi diversi per le variabili inviate al device
         imgs, lbls = images.to(DEVICE), targets.to(DEVICE)
 
         optimizer.zero_grad(set_to_none=True)
@@ -86,17 +69,13 @@ def train_one_epoch(
         running_loss += loss.item() * images.size(0)
         pbar.set_postfix({"loss": f"{loss.item():.4f}"})
 
-    return running_loss / len(loader.dataset)
+    # Casting per evitare warning IDE
+    num_samples = len(cast(Sized, cast(object, loader.dataset)))
+    return running_loss / num_samples
 
 
 def save_loss_plot(history: Dict[str, List[float]], out_dir: Path) -> None:
-    """Generate and save the Training vs Validation Loss plot.
-
-    Args:
-        history: Dictionary containing loss lists.
-        out_dir: Directory where the plot will be saved.
-
-    """
+    """Generate and save the Training vs. Validation Loss plot."""
     plt.figure(figsize=(10, 6))
     plt.plot(history["train_loss"], label="Training Loss", linewidth=2)
     plt.plot(history["val_loss"], label="Validation Loss", linewidth=2, linestyle="--")
@@ -111,11 +90,14 @@ def save_loss_plot(history: Dict[str, List[float]], out_dir: Path) -> None:
 
 def main() -> None:
     """Entry point for the training script."""
-    parser = argparse.ArgumentParser(description="P1 Training Script")
+    parser = argparse.ArgumentParser(description="Training Script")
     parser.add_argument("--model", type=str, required=True, help="Model architecture")
     parser.add_argument("--train", type=str, required=True, help="Path to train folder")
     parser.add_argument("--val", type=str, required=True, help="Path to val folder")
     parser.add_argument("--out", type=str, required=True, help="Output directory")
+    # NUOVO ARGOMENTO (Opzionale, default None)
+    parser.add_argument("--weights", type=str, default=None, help="Path to initial weights (for Fine-Tuning)")
+
     parser.add_argument("--batch", type=int, default=16, help="Batch size")
     parser.add_argument("--epochs", type=int, default=20, help="Number of epochs")
     args = parser.parse_args()
@@ -127,10 +109,19 @@ def main() -> None:
     train_loader = get_loader(Path(args.train), args.batch, shuffle=True, is_train=True)
     val_loader = get_loader(Path(args.val), args.batch, shuffle=False, is_train=False)
 
-    classes = train_loader.dataset.classes
+    # Casting esplicito per evitare warning su .classes
+    train_dataset = cast(ImageFolder, train_loader.dataset)
+    classes = train_dataset.classes
     print(f"[*] Detected {len(classes)} classes: {classes}")
 
+    # 1. Inizializza Modello
     model = get_model(args.model, len(classes))
+
+    # 2. (NUOVO) Carica pesi se specificati (Logica per Fase 2)
+    if args.weights:
+        print(f"[*] Loading Fine-Tuning weights from: {args.weights}")
+        state_dict = torch.load(args.weights, map_location=DEVICE, weights_only=True)
+        model.load_state_dict(state_dict)
 
     criterion = nn.CrossEntropyLoss(label_smoothing=0.1)
     optimizer = optim.AdamW(model.parameters(), lr=1e-4, weight_decay=1e-4)

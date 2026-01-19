@@ -1,4 +1,4 @@
-"""Data augmentation script for Pipeline 2: Single random transformation per image."""
+"""Data augmentation script per Pipeline 2: Singola trasformazione random tra le quattro disponibili."""
 
 import argparse
 import random
@@ -103,8 +103,6 @@ def main() -> None:
     print("[*] Generazione dataset aumentato (Originale + 1 Variante Casuale)...")
 
     for img_path in tqdm(images, desc="Augmenting"):
-        # Struttura cartelle:
-        # data/deduplicated/train/melanoma -> data/augmented/train/melanoma
         rel_path = img_path.relative_to(input_dir)
         target_path = output_dir / rel_path
         target_path.parent.mkdir(parents=True, exist_ok=True)

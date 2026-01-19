@@ -86,8 +86,6 @@ def save_metrics_table(report: Dict[str, Any], out_path: Path):
     # Nascondiamo gli assi (vogliamo solo la tabella)
     ax.axis('off')
 
-    # CORREZIONE QUI: Usiamo pd.plotting.table invece di ax.table
-    # Questo elimina il warning perché 'ax' è passato esplicitamente
     from pandas.plotting import table
 
     tbl = table(
