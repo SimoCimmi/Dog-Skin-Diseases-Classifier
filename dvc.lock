@@ -156,3 +156,22 @@ stages:
       hash: md5
       md5: 2ac987e9ddb472aa2c95cd87ea94815b
       size: 1856
+  augment_p2:
+    cmd: python src/preprocessing/augment.py --input data/deduplicated/train 
+      --output data/augmented/train
+    deps:
+    - path: data/deduplicated/train
+      hash: md5
+      md5: 27526b2d786990f153beb90c49449929.dir
+      size: 156395286
+      nfiles: 2946
+    - path: src/preprocessing/augment.py
+      hash: md5
+      md5: 1cfb09c798d8d86e7468fc536b890c54
+      size: 4524
+    outs:
+    - path: data/augmented/train
+      hash: md5
+      md5: 832c2a701ac69f7f9449b97790b72cca.dir
+      size: 321830737
+      nfiles: 5892
