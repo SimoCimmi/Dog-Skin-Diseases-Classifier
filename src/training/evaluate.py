@@ -3,20 +3,24 @@
 import argparse
 import json
 from pathlib import Path
-from typing import cast, Dict, Any, List
+from typing import Any, Dict, List, Tuple, cast
 
 import matplotlib.pyplot as plt
-import pandas as pd
 import numpy as np
+import pandas as pd
 import seaborn as sns
 import torch
+from pandas.plotting import table
 from sklearn.metrics import classification_report, confusion_matrix
-from tqdm import tqdm
 from torchvision.datasets import ImageFolder
+from tqdm import tqdm
 
 from src.training.common import DEVICE, get_loader, get_model
 
-def evaluate(model: torch.nn.Module, loader: torch.utils.data.DataLoader):
+
+def evaluate(
+    model: torch.nn.Module, loader: torch.utils.data.DataLoader
+) -> Tuple[np.ndarray, np.ndarray]:
     """Esegue l'inferenza e restituisce etichette reali e predette."""
     model.eval()
     all_preds = []
@@ -24,10 +28,11 @@ def evaluate(model: torch.nn.Module, loader: torch.utils.data.DataLoader):
 
     with torch.no_grad():
         for inputs, labels in tqdm(loader, desc="Evaluating"):
-            inputs = inputs.to(DEVICE)
+            # Soluzione PLW2901: rinominato inputs in imgs
+            imgs = inputs.to(DEVICE)
 
             with torch.amp.autocast(device_type="cuda", dtype=torch.bfloat16):
-                outputs = model(inputs)
+                outputs = model(imgs)
                 _, preds = torch.max(outputs, 1)
 
             all_preds.extend(preds.cpu().numpy())
@@ -36,7 +41,9 @@ def evaluate(model: torch.nn.Module, loader: torch.utils.data.DataLoader):
     return np.array(all_labels), np.array(all_preds)
 
 
-def plot_confusion_matrix(y_true, y_pred, classes: List[str], out_path: Path):
+def plot_confusion_matrix(
+    y_true: np.ndarray, y_pred: np.ndarray, classes: List[str], out_path: Path
+) -> None:
     """Genera e salva una matrice di confusione estetica."""
     cm = confusion_matrix(y_true, y_pred)
 
@@ -44,34 +51,33 @@ def plot_confusion_matrix(y_true, y_pred, classes: List[str], out_path: Path):
     sns.heatmap(
         cm,
         annot=True,
-        fmt='d',
-        cmap='Blues',
+        fmt="d",
+        cmap="Blues",
         xticklabels=classes,
         yticklabels=classes
     )
-    plt.xlabel('Predicted Label')
-    plt.ylabel('True Label')
-    plt.title('Confusion Matrix')
+    plt.xlabel("Predicted Label")
+    plt.ylabel("True Label")
+    plt.title("Confusion Matrix")
     plt.tight_layout()
     plt.savefig(out_path, dpi=300)
     plt.close()
 
 
-def save_metrics_table(report: Dict[str, Any], out_path: Path):
+def save_metrics_table(report: Dict[str, Any], out_path: Path) -> None:
     """Genera una tabella PNG professionale e un CSV usando Pandas Plotting."""
-
     # 1. Preparazione DataFrame
     df = pd.DataFrame(report).transpose()
 
     # Rimuoviamo righe non necessarie per la tabella
-    if 'accuracy' in df.index:
-        acc_val = df.loc['accuracy', 'f1-score']
-        df = df.drop('accuracy')
+    if "accuracy" in df.index:
+        acc_val = df.loc["accuracy", "f1-score"]
+        df = df.drop("accuracy")
     else:
-        acc_val = report.get('accuracy', 0.0)
+        acc_val = report.get("accuracy", 0.0)
 
     # Ordine e selezione colonne
-    cols = ['precision', 'recall', 'f1-score', 'support']
+    cols = ["precision", "recall", "f1-score", "support"]
     df = df[cols]
 
     # Salvataggio CSV
@@ -81,18 +87,18 @@ def save_metrics_table(report: Dict[str, Any], out_path: Path):
     # 2. Creazione Plot
     # Calcolo altezza dinamica basata sul numero di righe
     h = len(df) * 0.5 + 2
-    fig, ax = plt.subplots(figsize=(10, h))
+    # Soluzione RUF059: aggiunto underscore a fig
+    _fig, ax = plt.subplots(figsize=(10, h))
 
     # Nascondiamo gli assi (vogliamo solo la tabella)
-    ax.axis('off')
+    ax.axis("off")
 
-    from pandas.plotting import table
-
+    # Soluzione PLC0415: import spostato in alto
     tbl = table(
         ax,
         df.round(4),  # Passiamo direttamente il DataFrame arrotondato
-        loc='center',
-        cellLoc='center'
+        loc="center",
+        cellLoc="center"
     )
 
     # Styling
@@ -102,12 +108,14 @@ def save_metrics_table(report: Dict[str, Any], out_path: Path):
 
     plt.title(f"Classification Report (Global Accuracy: {acc_val:.2%})", fontsize=14)
 
-    plt.savefig(out_path, bbox_inches='tight', dpi=300)
+    plt.savefig(out_path, bbox_inches="tight", dpi=300)
     plt.close()
 
     print(f"[+] Table saved to: {out_path}")
 
+
 def main() -> None:
+    """Entry point per l'esecuzione dello script di valutazione."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--model", type=str, required=True)
     parser.add_argument("--weights", type=str, required=True, help="Path to model.pth")
@@ -148,19 +156,16 @@ def main() -> None:
     }
 
     # 5. Save Artifacts
-    # Salviamo il JSON (Dati grezzi per DVC)
     with open(out_dir / "metrics.json", "w") as f:
         json.dump(metrics, f, indent=4)
 
-    # Salviamo la Matrice di Confusione (PNG)
     plot_confusion_matrix(y_true, y_pred, classes, out_dir / "confusion_matrix.png")
 
-    # NUOVO: Salviamo la Tabella Metriche (PNG e CSV)
-    # Passiamo 'report' perché contiene la struttura completa compatibile con Pandas
     save_metrics_table(report, out_dir / "classification_report.png")
 
     print(f"\n[*] Global Accuracy: {metrics['accuracy']:.2%}")
     print(f"[*] Artifacts saved in: {out_dir}")
+
 
 if __name__ == "__main__":
     main()

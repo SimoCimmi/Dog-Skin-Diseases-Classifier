@@ -1,4 +1,4 @@
-"""Data augmentation script per Pipeline 2: Singola trasformazione random tra le quattro disponibili."""
+"""Data augmentation Pipeline 2: Trasformazione random tra le quattro disponibili."""
 
 import argparse
 import random

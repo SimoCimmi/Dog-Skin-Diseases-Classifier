@@ -4,14 +4,14 @@ import argparse
 import json
 import time
 from pathlib import Path
-from typing import Dict, List, cast, Sized
+from typing import Dict, List, Sized, cast
 
 import matplotlib.pyplot as plt
 import torch
 from torch import amp, nn, optim
 from torch.utils.data import DataLoader
-from tqdm import tqdm
 from torchvision.datasets import ImageFolder
+from tqdm import tqdm
 
 from src.training.common import DEVICE, get_loader, get_model
 
@@ -28,7 +28,8 @@ def validate(
             imgs, lbls = images.to(DEVICE), targets.to(DEVICE)
 
             # Autocast anche in validazione per coerenza
-            with amp.autocast(device_type="cuda" if torch.cuda.is_available() else "cpu"):
+            with amp.autocast(device_type="cuda" if torch.cuda.is_available()
+            else "cpu"):
                 outputs = model(imgs)
                 loss = criterion(outputs, lbls)
 
@@ -91,15 +92,22 @@ def save_loss_plot(history: Dict[str, List[float]], out_dir: Path) -> None:
 def main() -> None:
     """Entry point for the training script."""
     parser = argparse.ArgumentParser(description="Training Script")
-    parser.add_argument("--model", type=str, required=True, help="Model architecture")
-    parser.add_argument("--train", type=str, required=True, help="Path to train folder")
-    parser.add_argument("--val", type=str, required=True, help="Path to val folder")
-    parser.add_argument("--out", type=str, required=True, help="Output directory")
+    parser.add_argument("--model", type=str, required=True,
+                        help="Model architecture")
+    parser.add_argument("--train", type=str, required=True,
+                        help="Path to train folder")
+    parser.add_argument("--val", type=str, required=True,
+                        help="Path to val folder")
+    parser.add_argument("--out", type=str, required=True,
+                        help="Output directory")
     # NUOVO ARGOMENTO (Opzionale, default None)
-    parser.add_argument("--weights", type=str, default=None, help="Path to initial weights (for Fine-Tuning)")
+    parser.add_argument("--weights", type=str, default=None,
+                        help="Path to initial weights (for Fine-Tuning)")
 
-    parser.add_argument("--batch", type=int, default=16, help="Batch size")
-    parser.add_argument("--epochs", type=int, default=20, help="Number of epochs")
+    parser.add_argument("--batch", type=int, default=16,
+                        help="Batch size")
+    parser.add_argument("--epochs", type=int, default=20,
+                        help="Number of epochs")
     args = parser.parse_args()
 
     out_dir = Path(args.out)
