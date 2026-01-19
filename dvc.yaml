@@ -16,11 +16,11 @@ stages:
     foreach: [effnet_v2_s, convnext]
     do:
       # Uso: Train pulito, Valid pulito
-      cmd: python -m src.train --model ${item} --train data/deduplicated/train --val data/deduplicated/valid --out models/p1/${item} --batch 16 --epochs 2
+      cmd: python -m src.training.train --model ${item} --train data/deduplicated/train --val data/deduplicated/valid --out models/p1/${item} --batch 16 --epochs 4
       deps:
         - data/deduplicated/train
         - data/deduplicated/valid
-        - src/train.py
+        - src/training/train.py
       outs:
         - models/p1/${item}/model.pth
         - models/p1/${item}/loss_plot.png
@@ -30,10 +30,10 @@ stages:
     foreach: [effnet_v2_s, convnext]
     do:
       # Valutazione finale su Test Set pulito
-      cmd: python -m src.evaluate --model ${item} --weights models/p1/${item}/model.pth --data data/deduplicated/test --out models/p1/${item}
+      cmd: python -m src.training.evaluate --model ${item} --weights models/p1/${item}/model.pth --data data/deduplicated/test --out models/p1/${item}
       deps:
         - data/deduplicated/test
-        - src/evaluate.py
+        - src/training/evaluate.py
         - models/p1/${item}/model.pth
       metrics:
         - models/p1/${item}/metrics.json:

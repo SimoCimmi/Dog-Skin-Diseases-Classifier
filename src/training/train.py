@@ -12,7 +12,7 @@ from torch import amp, nn, optim
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
-from src.common import DEVICE, get_loader, get_model
+from src.training.common import DEVICE, get_loader, get_model
 
 
 def validate(
