@@ -1,0 +1,48 @@
+stages:
+  # =======================================================
+  # PIPELINE 1: BASELINE (Raw Clean Data)
+  # =======================================================
+
+  train:
+    foreach: [effnet_v2_s, convnext]
+    do:
+      wdir: ../../
+      cmd: >
+        python -m src.training.train 
+        --model ${item} 
+        --train data/deduplicated/train 
+        --val data/deduplicated/valid 
+        --out pipelines/p1_baseline/results/${item} 
+        --batch 16 
+        --epochs 2
+      deps:
+        - data/deduplicated/train
+        - data/deduplicated/valid
+        - src/training/train.py
+      outs:
+        - pipelines/p1_baseline/results/${item}/model.pth
+        - pipelines/p1_baseline/results/${item}/loss_plot.png
+        - pipelines/p1_baseline/results/${item}/history.json
+
+  evaluate:
+    foreach: [effnet_v2_s, convnext]
+    do:
+      wdir: ../../
+      cmd: >
+        python -m src.training.evaluate 
+        --model ${item} 
+        --weights pipelines/p1_baseline/results/${item}/model.pth 
+        --data data/deduplicated/test 
+        --out pipelines/p1_baseline/results/${item}
+      deps:
+        - data/deduplicated/test
+        - src/training/evaluate.py
+        - pipelines/p1_baseline/results/${item}/model.pth
+      metrics:
+        - pipelines/p1_baseline/results/${item}/metrics.json:
+            cache: false
+      plots:
+        - pipelines/p1_baseline/results/${item}/confusion_matrix.png:
+            cache: false
+        - pipelines/p1_baseline/results/${item}/classification_report.png:
+            cache: false

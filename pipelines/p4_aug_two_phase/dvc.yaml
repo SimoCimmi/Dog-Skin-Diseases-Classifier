@@ -1,0 +1,84 @@
+stages:
+  # =======================================================
+  # PIPELINE 4: HYBRID (Augment -> Balance -> Two-Phase)
+  # =======================================================
+
+  # 1. Balancing
+  # Prende l'output della Pipeline 2 (Augmented) e lo bilancia
+  balance:
+    wdir: ../../
+    cmd: python -m src.preprocessing.balance --input data/augmented/train --output data/hybrid_balanced/train
+    deps:
+      - data/augmented/train   # Dipendenza inter-pipeline!
+      - src/preprocessing/balance.py
+    outs:
+      - data/hybrid_balanced/train
+
+  # 2. FASE 1: Training su Dataset IBRIDO BILANCIATO
+  train_phase1:
+    foreach: [effnet_v2_s, convnext]
+    do:
+      wdir: ../../
+      cmd: >
+        python -m src.training.train 
+        --model ${item} 
+        --train data/hybrid_balanced/train 
+        --val data/deduplicated/valid 
+        --out pipelines/p4_aug_two_phase/results/phase1/${item} 
+        --batch 16 
+        --epochs 4
+      deps:
+        - data/hybrid_balanced/train
+        - data/deduplicated/valid
+        - src/training/train.py
+      outs:
+        - pipelines/p4_aug_two_phase/results/phase1/${item}/model.pth
+        - pipelines/p4_aug_two_phase/results/phase1/${item}/loss_plot.png
+
+  # 3. FASE 2: Fine-Tuning su Dataset IBRIDO COMPLETO (Augmented)
+  train_phase2:
+    foreach: [effnet_v2_s, convnext]
+    do:
+      wdir: ../../
+      cmd: >
+        python -m src.training.train 
+        --model ${item} 
+        --train data/augmented/train 
+        --val data/deduplicated/valid 
+        --out pipelines/p4_aug_two_phase/results/phase2/${item} 
+        --weights pipelines/p4_aug_two_phase/results/phase1/${item}/model.pth
+        --batch 16 
+        --epochs 4
+      deps:
+        - data/augmented/train
+        - data/deduplicated/valid
+        - src/training/train.py
+        - pipelines/p4_aug_two_phase/results/phase1/${item}/model.pth
+      outs:
+        - pipelines/p4_aug_two_phase/results/phase2/${item}/model.pth
+        - pipelines/p4_aug_two_phase/results/phase2/${item}/loss_plot.png
+        - pipelines/p4_aug_two_phase/results/phase2/${item}/history.json
+
+  # 4. Valutazione Finale (Sul modello Fase 2)
+  evaluate:
+    foreach: [effnet_v2_s, convnext]
+    do:
+      wdir: ../../
+      cmd: >
+        python -m src.training.evaluate 
+        --model ${item} 
+        --weights pipelines/p4_aug_two_phase/results/phase2/${item}/model.pth 
+        --data data/deduplicated/test 
+        --out pipelines/p4_aug_two_phase/results/phase2/${item}
+      deps:
+        - data/deduplicated/test
+        - src/training/evaluate.py
+        - pipelines/p4_aug_two_phase/results/phase2/${item}/model.pth
+      metrics:
+        - pipelines/p4_aug_two_phase/results/phase2/${item}/metrics.json:
+            cache: false
+      plots:
+        - pipelines/p4_aug_two_phase/results/phase2/${item}/confusion_matrix.png:
+            cache: false
+        - pipelines/p4_aug_two_phase/results/phase2/${item}/classification_report.png:
+            cache: false
