@@ -37,24 +37,23 @@ class SkinDetectorEDA:
         """Esegue l'analisi completa scansionando tutti gli split."""
         print(f"[*] Starting EDA on dataset at: {self.data_path}")
 
-        # 1. Estrazione Dati (Unica scansione per efficienza)
+        # Estrazione dei dati
         df_full = self._scan_dataset()
 
         if df_full.empty:
             print("[-] Error: Dataset is empty or path structure is incorrect.")
             return
 
-        # 2. Export CSV
         csv_path = self.report_path / "dataset_metadata.csv"
         df_full.to_csv(csv_path, index=False)
         print(f"[+] Metadata CSV exported to: {csv_path}")
 
-        # 3. Generazione Grafici
+        # Generazione dei Grafici
         self._plot_class_distribution(df_full)
         self._plot_split_distribution(df_full)
         self._plot_geometry(df_full)
 
-        # 4. Summary Terminale
+        # Summary
         self._print_executive_summary(df_full)
 
     def _scan_dataset(self) -> pd.DataFrame:
@@ -65,7 +64,7 @@ class SkinDetectorEDA:
         for split in self.splits:
             split_path = self.data_path / split
             if not split_path.exists():
-                print(f"[!] Warning: Split folder '{split}' not found in raw data.")
+                print(f"Warning: Split folder '{split}' not found in raw data.")
                 continue
 
             # Itera su ogni classe dentro lo split
@@ -86,7 +85,7 @@ class SkinDetectorEDA:
                                 data.append(
                                     {
                                         "Filename": img_path.name,
-                                        "Split": split,  # Colonna fondamentale
+                                        "Split": split,
                                         "Class": class_dir.name,
                                         "Width": w,
                                         "Height": h,
@@ -140,19 +139,17 @@ class SkinDetectorEDA:
         """Analizza risoluzione e aspect ratio."""
         sns.set_theme(style="white")
 
-        # Scatter plot Width vs. Height con colore per Split
         grid = sns.jointplot(
             data=df,
             x="Width",
             y="Height",
-            hue="Split",  # Vediamo se uno split ha immagini diverse
+            hue="Split",
             kind="scatter",
             alpha=0.6,
             palette="deep",
             height=10,
         )
 
-        # Linee di riferimento
         max_dim = max(df["Width"].max(), df["Height"].max())
         x_ref = np.linspace(0, max_dim, 100)
         grid.ax_joint.plot(x_ref, x_ref, "r--", alpha=0.5, label="1:1 (Square)")
@@ -182,7 +179,7 @@ class SkinDetectorEDA:
             pct = (count / total_imgs) * 100
             print(f"{split.capitalize()}: {count:5d} images ({pct:.1f}%)")
 
-        # Controllo Bilanciamento (Imbalance Ratio nel Train)
+        # Controllo Bilanciamento
         df_train = df[df["Split"] == "train"]
         if not df_train.empty:
             class_counts = df_train["Class"].value_counts()
@@ -195,7 +192,7 @@ class SkinDetectorEDA:
         print(f"\nAverage Resolution: {int(avg_w)}x{int(avg_h)} px")
 
         print("-" * 60)
-        print(f"[✓] Analysis complete. Check graphs in: {self.report_path}")
+        print(f"Analysis complete. Check graphs in: {self.report_path}")
         print("=" * 60)
 
 
@@ -204,11 +201,10 @@ if __name__ == "__main__":
     current_file = Path(__file__).resolve()
     project_root = current_file.parent.parent  # Sale da src/ a root
 
-    # Configurazione Argparse per flessibilità da riga di comando
     parser = argparse.ArgumentParser(description="Esegui EDA su "
                                                  "una specifica cartella dati.")
 
-    # Argomento 1: Cartella di input (default: data/raw)
+    # Argomento 1: Cartella di input (data/raw)
     parser.add_argument(
         "--input",
         type=str,
@@ -217,7 +213,7 @@ if __name__ == "__main__":
              "(es. data/raw o data/deduplicated)"
     )
 
-    # Argomento 2: Cartella di output report (opzionale)
+    # Argomento 2: Cartella di output report
     parser.add_argument(
         "--output",
         type=str,
