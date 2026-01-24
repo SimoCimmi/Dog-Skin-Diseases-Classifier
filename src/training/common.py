@@ -28,7 +28,6 @@ def get_loader(
 
     """
     # Risoluzione standard ImageNet (224).
-    # Con 8GB VRAM puoi tentare 384, ma 224 è sicuro per batch=16.
     resize_dim = 224
 
     stats = ([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
@@ -79,11 +78,8 @@ def get_model(model_name: str, num_classes: int) -> nn.Module:
         model.classifier[1] = nn.Linear(model.classifier[1].in_features, num_classes)
 
     elif "convnext" in model_name:
-        # ConvNeXt Tiny (Equivalente a ResNet50 ma più moderno)
-        # Usiamo Tiny invece di Base per stare sicuri negli 8GB VRAM
         weights = models.ConvNeXt_Tiny_Weights.DEFAULT
         model = models.convnext_tiny(weights=weights)
-        # Sostituzione della testa
         model.classifier[2] = nn.Linear(model.classifier[2].in_features, num_classes)
     else:
         raise ValueError(f"Modello {model_name} non supportato.")

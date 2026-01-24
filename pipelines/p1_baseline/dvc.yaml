@@ -14,7 +14,7 @@ stages:
         --val data/deduplicated/valid 
         --out pipelines/p1_baseline/results/${item} 
         --batch 16 
-        --epochs 2
+        --epochs 20
       deps:
         - data/deduplicated/train
         - data/deduplicated/valid

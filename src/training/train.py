@@ -27,7 +27,6 @@ def validate(
         for images, targets in loader:
             imgs, lbls = images.to(DEVICE), targets.to(DEVICE)
 
-            # Autocast anche in validazione per coerenza
             with amp.autocast(device_type="cuda" if torch.cuda.is_available()
             else "cpu"):
                 outputs = model(imgs)
@@ -35,7 +34,6 @@ def validate(
 
             running_loss += loss.item() * images.size(0)
 
-    # Casting per evitare warning IDE "Expected Sized"
     num_samples = len(cast(Sized, cast(object, loader.dataset)))
     return running_loss / num_samples
 
@@ -70,7 +68,6 @@ def train_one_epoch(
         running_loss += loss.item() * images.size(0)
         pbar.set_postfix({"loss": f"{loss.item():.4f}"})
 
-    # Casting per evitare warning IDE
     num_samples = len(cast(Sized, cast(object, loader.dataset)))
     return running_loss / num_samples
 
@@ -100,7 +97,7 @@ def main() -> None:
                         help="Path to val folder")
     parser.add_argument("--out", type=str, required=True,
                         help="Output directory")
-    # NUOVO ARGOMENTO (Opzionale, default None)
+
     parser.add_argument("--weights", type=str, default=None,
                         help="Path to initial weights (for Fine-Tuning)")
 
@@ -117,7 +114,6 @@ def main() -> None:
     train_loader = get_loader(Path(args.train), args.batch, shuffle=True, is_train=True)
     val_loader = get_loader(Path(args.val), args.batch, shuffle=False, is_train=False)
 
-    # Casting esplicito per evitare warning su .classes
     train_dataset = cast(ImageFolder, train_loader.dataset)
     classes = train_dataset.classes
     print(f"[*] Detected {len(classes)} classes: {classes}")
@@ -125,7 +121,7 @@ def main() -> None:
     # 1. Inizializza Modello
     model = get_model(args.model, len(classes))
 
-    # 2. (NUOVO) Carica pesi se specificati (Logica per Fase 2)
+    # 2. Carica pesi se specificati (Logica per Fase 2)
     if args.weights:
         print(f"[*] Loading Fine-Tuning weights from: {args.weights}")
         state_dict = torch.load(args.weights, map_location=DEVICE, weights_only=True)

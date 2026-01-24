@@ -28,7 +28,6 @@ def evaluate(
 
     with torch.no_grad():
         for inputs, labels in tqdm(loader, desc="Evaluating"):
-            # Soluzione PLW2901: rinominato inputs in imgs
             imgs = inputs.to(DEVICE)
 
             with torch.amp.autocast(device_type="cuda", dtype=torch.bfloat16):
@@ -85,15 +84,11 @@ def save_metrics_table(report: Dict[str, Any], out_path: Path) -> None:
     df.to_csv(csv_path)
 
     # 2. Creazione Plot
-    # Calcolo altezza dinamica basata sul numero di righe
     h = len(df) * 0.5 + 2
-    # Soluzione RUF059: aggiunto underscore a fig
     _fig, ax = plt.subplots(figsize=(10, h))
 
-    # Nascondiamo gli assi (vogliamo solo la tabella)
     ax.axis("off")
 
-    # Soluzione PLC0415: import spostato in alto
     tbl = table(
         ax,
         df.round(4),  # Passiamo direttamente il DataFrame arrotondato
@@ -130,7 +125,6 @@ def main() -> None:
     # 1. Load Data
     loader = get_loader(Path(args.data), args.batch, shuffle=False, is_train=False)
 
-    # Casting esplicito
     dataset = cast(ImageFolder, loader.dataset)
     classes = dataset.classes
 
