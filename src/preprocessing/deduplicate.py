@@ -17,10 +17,10 @@ def get_image_hash(filepath: Path) -> str:
 def find_all_duplicates(root_dir: Path) -> dict[str, list[Path]]:
     """Scansiona tutte le sottocartelle e mappa gli hash."""
     hashes = defaultdict(list)
-    # Estensioni comuni
+
     valid_extensions = {".jpg", ".jpeg", ".png", ".bmp", ".webp"}
 
-    print(f"🔍 Scansione totale in corso su: {root_dir}...")
+    print(f"Scansione totale in corso su: {root_dir}...")
 
     # rglob trova i file indipendentemente dalla profondità
     for file_path in root_dir.rglob("*"):
@@ -40,7 +40,7 @@ def run_deduplication(input_dir: str, output_dir: str) -> None:
     stats = {
         "total_images_scanned": 0,
         "unique_images_kept": 0,
-        "removed_same_split": 0,  # Duplicati ridondanti (es. copia in train)
+        "removed_same_split": 0,  # Duplicati ridondanti
         "removed_cross_class": 0,  # Ambiguità (es. img1 in Healthy e in Ringworm)
         "removed_cross_split": 0,  # DATA LEAKAGE (es. img1 in train e in test)
     }
@@ -48,7 +48,7 @@ def run_deduplication(input_dir: str, output_dir: str) -> None:
     all_entries = find_all_duplicates(input_path)
 
     if not all_entries:
-        print("❌ Dataset vuoto o percorso errato.")
+        print("Dataset vuoto o percorso errato.")
         return
 
     stats["total_images_scanned"] = sum(len(paths) for paths in all_entries.values())
@@ -68,7 +68,7 @@ def run_deduplication(input_dir: str, output_dir: str) -> None:
         if len(splits_involved) > 1:
             stats["removed_cross_split"] += len(paths)
             print(
-                f"⚠️ LEAKAGE: Hash {h} in {splits_involved}. Rimossi tutti."
+                f"LEAKAGE: Hash {h} in {splits_involved}. Rimossi tutti."
             )
             continue
 
@@ -86,7 +86,7 @@ def run_deduplication(input_dir: str, output_dir: str) -> None:
 
     # --- REPORT FINALE PER IL PROGETTO ---
     print("\n" + "=" * 40)
-    print("📊 REPORT DEDUPLICAZIONE (Pipeline 1)")
+    print("REPORT DEDUPLICAZIONE (Pipeline 1)")
     print("=" * 40)
     print(f"Totale immagini analizzate:      {stats['total_images_scanned']}")
     print(f"Immagini valide mantenute:       {stats['unique_images_kept']}")
@@ -96,15 +96,15 @@ def run_deduplication(input_dir: str, output_dir: str) -> None:
         "(Ridondanza)"
     )
     print(
-        f"⛔ Conflict Cross-Class rimossi:  {stats['removed_cross_class']} "
+        f"Conflict Cross-Class rimossi:  {stats['removed_cross_class']} "
         "(Etichetta ambigua)"
     )
     print(
-        f"☢️  Conflict Cross-Split rimossi:  {stats['removed_cross_split']} "
+        f"Conflict Cross-Split rimossi:  {stats['removed_cross_split']} "
         "(DATA LEAKAGE evitato)"
     )
     print("=" * 40)
-    print(f"✅ Dataset pulito salvato in: {output_path}")
+    print(f"Dataset pulito salvato in: {output_path}")
 
 
 if __name__ == "__main__":

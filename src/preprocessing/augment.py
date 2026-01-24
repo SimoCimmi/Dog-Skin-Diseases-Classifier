@@ -12,8 +12,9 @@ from tqdm import tqdm
 
 
 def add_noise(image: Image.Image) -> Image.Image:
-    """Add random Gaussian noise to the image."""
+    """Aggiunta di rumore random all'immagine."""
     img_array = np.array(image).astype(float)
+
     # Intensità del rumore casuale tra 2% e 5%
     intensity = random.uniform(0.02, 0.05)
     noise = np.random.normal(loc=0, scale=255 * intensity, size=img_array.shape)
@@ -23,41 +24,40 @@ def add_noise(image: Image.Image) -> Image.Image:
 
 
 def adjust_saturation(image: Image.Image) -> Image.Image:
-    """Adjust color saturation randomly."""
+    """Modifica randomica della saturazione dell'immagine."""
     enhancer = ImageEnhance.Color(image)
+
     # Fattore tra 1.2 (vivido) e 1.8 (molto saturo)
     factor = random.uniform(1.2, 1.8)
     return enhancer.enhance(factor)
 
 
 def flip_horizontal(image: Image.Image) -> Image.Image:
-    """Apply horizontal flip."""
+    """Flip orizzontale dell'immagine."""
     return image.transpose(Image.Transpose.FLIP_LEFT_RIGHT)
 
 
 def flip_vertical(image: Image.Image) -> Image.Image:
-    """Apply vertical flip."""
+    """Flip verticale dell'immagine."""
     return image.transpose(Image.Transpose.FLIP_TOP_BOTTOM)
 
 
 def rotate_small(image: Image.Image) -> Image.Image:
-    """Rotate image by ± 5 degrees."""
+    """Rotazione dell'immagine di ± 5 gradi."""
     angle = random.choice([-5, 5])
     return image.rotate(angle, expand=False)
 
 
 def rotate_90(image: Image.Image) -> Image.Image:
-    """Rotate image by ± 90 degrees."""
+    """Rotazione dell'immagine di ± 90 gradi."""
     angle = random.choice([-90, 90])
     return image.rotate(angle, expand=True)
 
 
 def get_random_transform() -> Callable[[Image.Image], Image.Image]:
-    """Return a random transformation function from the available list.
+    """Restituisce una funzione di trasformazione randomica tra quelle disponibili.
 
-    Returns:
-        A function that takes an Image and returns an Image.
-
+    Return: una funzione che prende in input un'immagine e dà in output un'immagine.
     """
     transforms: List[Callable[[Image.Image], Image.Image]] = [
         add_noise,
@@ -71,7 +71,7 @@ def get_random_transform() -> Callable[[Image.Image], Image.Image]:
 
 
 def main() -> None:
-    """Execute the augmentation pipeline."""
+    """Esegue la pipeline di augmentation."""
     parser = argparse.ArgumentParser(description="P2: Random Augmentation Script")
     parser.add_argument(
         "--input",
@@ -113,7 +113,6 @@ def main() -> None:
         # 2. Genera e salva la variante aumentata
         try:
             with Image.open(img_path) as raw_img:
-                # Correzione PLW2901: raw_img non viene sovrascritta
                 img = raw_img.convert("RGB")
 
                 # Seleziona UNA trasformazione casuale
@@ -130,7 +129,7 @@ def main() -> None:
         except Exception as e:
             print(f"Error processing {img_path}: {e}")
 
-    print(f"\n✅ Augmentation completata. Dataset salvato in: {output_dir}")
+    print(f"\nAugmentation completata. Dataset salvato in: {output_dir}")
 
 
 if __name__ == "__main__":

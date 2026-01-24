@@ -4,13 +4,11 @@ import shutil
 import sys
 from pathlib import Path
 
-# Fix per Windows: Cache breve
 os.environ["KAGGLEHUB_CACHE"] = "C:\\k_data"
 
 import kagglehub
 
-# --- CALCOLO PERCORSI ASSOLUTI ---
-# Ottiene la cartella dove si trova QUESTO file (src/)
+# Ottiene la cartella dove si trova il file (src/)
 SCRIPT_DIR = Path(__file__).resolve().parent
 # Ottiene la cartella padre (root del progetto: Dog-Skin-Diseases-Classifier/)
 PROJECT_ROOT = SCRIPT_DIR.parent
@@ -34,21 +32,19 @@ def download_dataset() -> None:
 
     # Verifica se esiste già
     if dest_path.exists() and any(dest_path.iterdir()):
-        print(f"⚠️  La cartella '{dest_path}' non è vuota. Download annullato.")
+        print(f"La cartella '{dest_path}' non è vuota. Download annullato.")
         return
 
-    print(f"📍 Destinazione fissata a: {dest_path}")
-    print("⬇️  Inizio download dataset da Kaggle...")
+    print(f"Destinazione fissata a: {dest_path}")
+    print("Inizio download dataset da Kaggle...")
 
     try:
-        # Download in cache temporanea
         cache_path_str = kagglehub.dataset_download(
             "youssefmohmmed/dogs-skin-diseases-image-dataset"
         )
 
-        # Creazione cartella (assicurati che i genitori esistano)
+        # Creazione cartella
         dest_path.mkdir(parents=True, exist_ok=True)
-        print("📦 Spostamento file...")
 
         cache_path = Path(cache_path_str)
 
@@ -64,7 +60,7 @@ def download_dataset() -> None:
 
                 shutil.copy2(safe_src, safe_dst)
 
-        print(f"✅ Dataset scaricato correttamente in:\n   {dest_path}")
+        print(f"Dataset scaricato correttamente in:\n   {dest_path}")
 
         # Pulizia cache
         try:
@@ -73,7 +69,7 @@ def download_dataset() -> None:
             pass
 
     except Exception as e:
-        print(f"❌ Errore: {e}")
+        print(f"Errore: {e}")
         sys.exit(1)
 
 

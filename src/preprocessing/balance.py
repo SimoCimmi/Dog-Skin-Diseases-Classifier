@@ -35,7 +35,7 @@ def undersample_dataset(input_dir: Path, output_dir: Path, seed: int = 42) -> No
 
     random.seed(seed)
 
-    # 2. Copia dei file (o creazione dataset)
+    # 2. Copia dei file
     for class_name, count in counts.items():
         src_class_dir = input_dir / class_name
         dst_class_dir = output_dir / class_name
