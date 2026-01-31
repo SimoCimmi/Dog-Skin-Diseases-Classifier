@@ -67,9 +67,7 @@ def run_deduplication(input_dir: str, output_dir: str) -> None:
         # CASO 2: Inconsistenza di Split (Data Leakage)
         if len(splits_involved) > 1:
             stats["removed_cross_split"] += len(paths)
-            print(
-                f"LEAKAGE: Hash {h} in {splits_involved}. Rimossi tutti."
-            )
+            print(f"LEAKAGE: Hash {h} in {splits_involved}. Rimossi tutti.")
             continue
 
         # CASO 3: Duplicati "sicuri"
@@ -91,10 +89,7 @@ def run_deduplication(input_dir: str, output_dir: str) -> None:
     print(f"Totale immagini analizzate:      {stats['total_images_scanned']}")
     print(f"Immagini valide mantenute:       {stats['unique_images_kept']}")
     print("-" * 40)
-    print(
-        f"🗑️  Duplicati interni rimossi:    {stats['removed_same_split']} "
-        "(Ridondanza)"
-    )
+    print(f"Duplicati interni rimossi:    {stats['removed_same_split']} (Ridondanza)")
     print(
         f"Conflict Cross-Class rimossi:  {stats['removed_cross_class']} "
         "(Etichetta ambigua)"
@@ -110,10 +105,7 @@ def run_deduplication(input_dir: str, output_dir: str) -> None:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--input",
-        type=str,
-        default="data/raw",
-        help="Input dataset root"
+        "--input", type=str, default="data/raw", help="Input dataset root"
     )
     parser.add_argument(
         "--output",

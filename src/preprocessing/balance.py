@@ -15,8 +15,11 @@ def get_class_counts(data_dir: Path) -> Dict[str, int]:
     for class_dir in data_dir.iterdir():
         if class_dir.is_dir():
             # Conta solo file immagine validi
-            files = [f for f in class_dir.glob("*") if f.suffix.lower()
-                     in {'.jpg', '.jpeg', '.png'}]
+            files = [
+                f
+                for f in class_dir.glob("*")
+                if f.suffix.lower() in {".jpg", ".jpeg", ".png"}
+            ]
             counts[class_dir.name] = len(files)
     return counts
 
@@ -44,13 +47,15 @@ def undersample_dataset(input_dir: Path, output_dir: Path, seed: int = 42) -> No
         all_files = list(src_class_dir.glob("*"))
 
         # Filtriamo solo estensioni immagini
-        images = [f for f in all_files if f.suffix.lower() in {'.jpg', '.jpeg', '.png'}]
+        images = [f for f in all_files if f.suffix.lower() in {".jpg", ".jpeg", ".png"}]
 
         # Selezioniamo casualmente N immagini (dove N = min_count)
         selected_images = random.sample(images, min_count)
 
-        print(f"    -> Copia {len(selected_images)}/{count} "
-              f"immagini per '{class_name}'...")
+        print(
+            f"    -> Copia {len(selected_images)}/{count} "
+            f"immagini per '{class_name}'..."
+        )
 
         for img_path in tqdm(selected_images, desc=class_name, leave=False):
             shutil.copy2(img_path, dst_class_dir / img_path.name)
@@ -60,14 +65,16 @@ def undersample_dataset(input_dir: Path, output_dir: Path, seed: int = 42) -> No
 
 def main() -> None:
     """Esegue il processo di undersampling basato sugli argomenti da riga di comando."""
-    parser = argparse.ArgumentParser(description="Random Undersampling"
-                                                 " per Two-Phase Learning")
-    parser.add_argument("--input", type=str, required=True,
-                        help="Path dataset originale/deduplicato")
-    parser.add_argument("--output", type=str, required=True,
-                        help="Path dataset bilanciato")
-    parser.add_argument("--seed", type=int, default=42,
-                        help="Seed per riproducibilità")
+    parser = argparse.ArgumentParser(
+        description="Random Undersampling per Two-Phase Learning"
+    )
+    parser.add_argument(
+        "--input", type=str, required=True, help="Path dataset originale/deduplicato"
+    )
+    parser.add_argument(
+        "--output", type=str, required=True, help="Path dataset bilanciato"
+    )
+    parser.add_argument("--seed", type=int, default=42, help="Seed per riproducibilità")
 
     args = parser.parse_args()
 

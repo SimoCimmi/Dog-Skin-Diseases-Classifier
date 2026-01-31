@@ -48,12 +48,7 @@ def plot_confusion_matrix(
 
     plt.figure(figsize=(10, 8))
     sns.heatmap(
-        cm,
-        annot=True,
-        fmt="d",
-        cmap="Blues",
-        xticklabels=classes,
-        yticklabels=classes
+        cm, annot=True, fmt="d", cmap="Blues", xticklabels=classes, yticklabels=classes
     )
     plt.xlabel("Predicted Label")
     plt.ylabel("True Label")
@@ -93,7 +88,7 @@ def save_metrics_table(report: Dict[str, Any], out_path: Path) -> None:
         ax,
         df.round(4),  # Passiamo direttamente il DataFrame arrotondato
         loc="center",
-        cellLoc="center"
+        cellLoc="center",
     )
 
     # Styling
@@ -146,7 +141,7 @@ def main() -> None:
         "accuracy": report["accuracy"],
         "f1_score_macro": report["macro avg"]["f1-score"],
         "f1_score_weighted": report["weighted avg"]["f1-score"],
-        "per_class": report
+        "per_class": report,
     }
 
     # 5. Save Artifacts

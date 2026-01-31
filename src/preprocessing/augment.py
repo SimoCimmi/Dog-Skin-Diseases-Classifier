@@ -77,13 +77,13 @@ def main() -> None:
         "--input",
         type=str,
         required=True,
-        help="Input training folder (e.g., data/deduplicated/train)"
+        help="Input training folder (e.g., data/deduplicated/train)",
     )
     parser.add_argument(
         "--output",
         type=str,
         required=True,
-        help="Output training folder (e.g., data/augmented/train)"
+        help="Output training folder (e.g., data/augmented/train)",
     )
     args = parser.parse_args()
 

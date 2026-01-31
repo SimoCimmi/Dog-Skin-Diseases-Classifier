@@ -48,7 +48,7 @@ stages:
         --out pipelines/p4_aug_two_phase/results/phase2/${item} 
         --weights pipelines/p4_aug_two_phase/results/phase1/${item}/model.pth
         --batch 16 
-        --epochs 10
+        --epochs 6
       deps:
         - data/augmented/train
         - data/deduplicated/valid

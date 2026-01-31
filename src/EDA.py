@@ -201,8 +201,9 @@ if __name__ == "__main__":
     current_file = Path(__file__).resolve()
     project_root = current_file.parent.parent  # Sale da src/ a root
 
-    parser = argparse.ArgumentParser(description="Esegui EDA su "
-                                                 "una specifica cartella dati.")
+    parser = argparse.ArgumentParser(
+        description="Esegui EDA su una specifica cartella dati."
+    )
 
     # Argomento 1: Cartella di input (data/raw)
     parser.add_argument(
@@ -210,7 +211,7 @@ if __name__ == "__main__":
         type=str,
         default=str(project_root / "data" / "raw"),
         help="Path alla cartella contenente il dataset "
-             "(es. data/raw o data/deduplicated)"
+        "(es. data/raw o data/deduplicated)",
     )
 
     # Argomento 2: Cartella di output report
@@ -219,7 +220,7 @@ if __name__ == "__main__":
         type=str,
         default=None,
         help="Path dove salvare i report. Se vuoto, crea una cartella"
-             " automatica in reports/"
+        " automatica in reports/",
     )
 
     args = parser.parse_args()

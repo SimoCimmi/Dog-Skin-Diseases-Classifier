@@ -16,9 +16,7 @@ from tqdm import tqdm
 from src.training.common import DEVICE, get_loader, get_model
 
 
-def validate(
-    model: nn.Module, loader: DataLoader, criterion: nn.Module
-) -> float:
+def validate(model: nn.Module, loader: DataLoader, criterion: nn.Module) -> float:
     """Calculate average loss on the validation set."""
     model.eval()
     running_loss = 0.0
@@ -27,8 +25,9 @@ def validate(
         for images, targets in loader:
             imgs, lbls = images.to(DEVICE), targets.to(DEVICE)
 
-            with amp.autocast(device_type="cuda" if torch.cuda.is_available()
-            else "cpu"):
+            with amp.autocast(
+                device_type="cuda" if torch.cuda.is_available() else "cpu"
+            ):
                 outputs = model(imgs)
                 loss = criterion(outputs, lbls)
 
@@ -89,22 +88,20 @@ def save_loss_plot(history: Dict[str, List[float]], out_dir: Path) -> None:
 def main() -> None:
     """Entry point for the training script."""
     parser = argparse.ArgumentParser(description="Training Script")
-    parser.add_argument("--model", type=str, required=True,
-                        help="Model architecture")
-    parser.add_argument("--train", type=str, required=True,
-                        help="Path to train folder")
-    parser.add_argument("--val", type=str, required=True,
-                        help="Path to val folder")
-    parser.add_argument("--out", type=str, required=True,
-                        help="Output directory")
+    parser.add_argument("--model", type=str, required=True, help="Model architecture")
+    parser.add_argument("--train", type=str, required=True, help="Path to train folder")
+    parser.add_argument("--val", type=str, required=True, help="Path to val folder")
+    parser.add_argument("--out", type=str, required=True, help="Output directory")
 
-    parser.add_argument("--weights", type=str, default=None,
-                        help="Path to initial weights (for Fine-Tuning)")
+    parser.add_argument(
+        "--weights",
+        type=str,
+        default=None,
+        help="Path to initial weights (for Fine-Tuning)",
+    )
 
-    parser.add_argument("--batch", type=int, default=16,
-                        help="Batch size")
-    parser.add_argument("--epochs", type=int, default=20,
-                        help="Number of epochs")
+    parser.add_argument("--batch", type=int, default=16, help="Batch size")
+    parser.add_argument("--epochs", type=int, default=20, help="Number of epochs")
     args = parser.parse_args()
 
     out_dir = Path(args.out)
@@ -158,8 +155,10 @@ def main() -> None:
         )
 
     total_time = (time.time() - start_time) / 60
-    print(f"[*] Training complete in {total_time:.1f} min. "
-          f"Best Val Loss: {best_val_loss:.4f}")
+    print(
+        f"[*] Training complete in {total_time:.1f} min. "
+        f"Best Val Loss: {best_val_loss:.4f}"
+    )
 
     save_loss_plot(history, out_dir)
     with open(out_dir / "history.json", "w") as f:
