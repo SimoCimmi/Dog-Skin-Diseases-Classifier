@@ -30,8 +30,8 @@ stages:
       nfiles: 4315
     - path: src/preprocessing/deduplicate.py
       hash: md5
-      md5: dd4df01c1a8f2793d16fe5184b49ecc0
-      size: 4183
+      md5: 1c8467bfac92e0e03adae3683f9d1299
+      size: 3965
     outs:
     - path: data/deduplicated
       hash: md5

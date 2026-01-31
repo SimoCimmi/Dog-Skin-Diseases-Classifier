@@ -84,7 +84,7 @@ def run_deduplication(input_dir: str, output_dir: str) -> None:
 
     # --- REPORT FINALE PER IL PROGETTO ---
     print("\n" + "=" * 40)
-    print("REPORT DEDUPLICAZIONE (Pipeline 1)")
+    print("REPORT DEDUPLICAZIONE")
     print("=" * 40)
     print(f"Totale immagini analizzate:      {stats['total_images_scanned']}")
     print(f"Immagini valide mantenute:       {stats['unique_images_kept']}")

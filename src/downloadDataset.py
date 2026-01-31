@@ -8,11 +8,8 @@ os.environ["KAGGLEHUB_CACHE"] = "C:\\k_data"
 
 import kagglehub
 
-# Ottiene la cartella dove si trova il file (src/)
 SCRIPT_DIR = Path(__file__).resolve().parent
-# Ottiene la cartella padre (root del progetto: Dog-Skin-Diseases-Classifier/)
 PROJECT_ROOT = SCRIPT_DIR.parent
-# Definisce il target finale in modo assoluto
 DEFAULT_DESTINATION = PROJECT_ROOT / "data" / "raw"
 
 
