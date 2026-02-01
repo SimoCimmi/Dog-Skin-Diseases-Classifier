@@ -62,9 +62,7 @@ def load_trained_model() -> tuple[nn.Module, torch.device]:
 
     # map_location=device garantisce che funzioni anche se hai trainato
     # su GPU e testi su CPU
-    state_dict = torch.load(
-        WEIGHTS_PATH, map_location=device, weights_only=True
-    )
+    state_dict = torch.load(WEIGHTS_PATH, map_location=device, weights_only=True)
     model.load_state_dict(state_dict)
 
     model.to(device)
