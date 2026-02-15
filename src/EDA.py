@@ -229,12 +229,11 @@ if __name__ == "__main__":
     input_path = Path(args.input)
 
     # Se l'utente non specifica l'output, lo creiamo basandoci sul nome
-    # della cartella input. Es: se input è 'data/deduplicated', output
-    # sarà 'reports/eda_deduplicated'
+    # della cartella input.
     if args.output:
         report_path = Path(args.output)
     else:
-        folder_name = input_path.name  # es. 'raw' o 'deduplicated'
+        folder_name = input_path.name
         report_path = project_root / "reports" / f"eda_{folder_name}"
 
     if not input_path.exists():
