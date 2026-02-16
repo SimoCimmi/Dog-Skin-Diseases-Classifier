@@ -1,0 +1,56 @@
+{
+    "accuracy": 0.9669811320754716,
+    "f1_score_macro": 0.9558675303222639,
+    "f1_score_weighted": 0.9669783917962389,
+    "per_class": {
+        "Dermatitis": {
+            "precision": 0.984375,
+            "recall": 0.9545454545454546,
+            "f1-score": 0.9692307692307692,
+            "support": 66.0
+        },
+        "Fungal_infections": {
+            "precision": 0.9183673469387755,
+            "recall": 0.9,
+            "f1-score": 0.9090909090909091,
+            "support": 50.0
+        },
+        "Healthy": {
+            "precision": 0.9705882352941176,
+            "recall": 0.9565217391304348,
+            "f1-score": 0.9635036496350365,
+            "support": 69.0
+        },
+        "Hypersensitivity": {
+            "precision": 0.8846153846153846,
+            "recall": 0.9583333333333334,
+            "f1-score": 0.92,
+            "support": 24.0
+        },
+        "demodicosis": {
+            "precision": 0.9900990099009901,
+            "recall": 1.0,
+            "f1-score": 0.9950248756218906,
+            "support": 100.0
+        },
+        "ringworm": {
+            "precision": 0.9741379310344828,
+            "recall": 0.9826086956521739,
+            "f1-score": 0.9783549783549783,
+            "support": 115.0
+        },
+        "accuracy": 0.9669811320754716,
+        "macro avg": {
+            "precision": 0.9536971512972919,
+            "recall": 0.9586682037768995,
+            "f1-score": 0.9558675303222639,
+            "support": 424.0
+        },
+        "weighted avg": {
+            "precision": 0.9672741459246855,
+            "recall": 0.9669811320754716,
+            "f1-score": 0.9669783917962389,
+            "support": 424.0
+        }
+    }
+}

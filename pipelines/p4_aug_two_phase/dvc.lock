@@ -1,0 +1,215 @@
+schema: '2.0'
+stages:
+  balance:
+    cmd: python -m src.preprocessing.balance --input data/augmented/train 
+      --output data/hybrid_balanced/train
+    deps:
+    - path: data/augmented/train
+      hash: md5
+      md5: d2cd56c36bb30148efab96eee61575bf.dir
+      size: 322168700
+      nfiles: 5892
+    - path: src/preprocessing/balance.py
+      hash: md5
+      md5: d1cefdd6cc3bad46a1fdb109e05cb1a4
+      size: 5986
+    outs:
+    - path: data/hybrid_balanced/train
+      hash: md5
+      md5: 4130499bd8195b9b9e054c89589cf149.dir
+      size: 125506539
+      nfiles: 2340
+  train_phase1@convnext:
+    cmd: "python -m src.training.train  --model convnext  --train data/hybrid_balanced/train\
+      \  --val data/deduplicated/valid  --out pipelines/p4_aug_two_phase/results/phase1/convnext\
+      \  --batch 16  --epochs 4\n"
+    deps:
+    - path: data/deduplicated/valid
+      hash: md5
+      md5: 4dcd942d3ef5398b1c4c275e82e79962.dir
+      size: 44487134
+      nfiles: 833
+    - path: data/hybrid_balanced/train
+      hash: md5
+      md5: 4130499bd8195b9b9e054c89589cf149.dir
+      size: 125506539
+      nfiles: 2340
+    - path: src/training/train.py
+      hash: md5
+      md5: 0384b9b637fc27f2989c34cd6d1a2bc0
+      size: 5667
+    outs:
+    - path: pipelines/p4_aug_two_phase/results/phase1/convnext/loss_plot.png
+      hash: md5
+      md5: d848aa942cd87854d6dd2fcc2298db2c
+      size: 135959
+    - path: pipelines/p4_aug_two_phase/results/phase1/convnext/model.pth
+      hash: md5
+      md5: 292d65238396cb5e95e046a53e7b5b75
+      size: 111353691
+  train_phase2@convnext:
+    cmd: "python -m src.training.train  --model convnext  --train data/augmented/train\
+      \  --val data/deduplicated/valid  --out pipelines/p4_aug_two_phase/results/phase2/convnext\
+      \  --weights pipelines/p4_aug_two_phase/results/phase1/convnext/model.pth --batch
+      16  --epochs 6\n"
+    deps:
+    - path: data/augmented/train
+      hash: md5
+      md5: d2cd56c36bb30148efab96eee61575bf.dir
+      size: 322168700
+      nfiles: 5892
+    - path: data/deduplicated/valid
+      hash: md5
+      md5: 4dcd942d3ef5398b1c4c275e82e79962.dir
+      size: 44487134
+      nfiles: 833
+    - path: pipelines/p4_aug_two_phase/results/phase1/convnext/model.pth
+      hash: md5
+      md5: 292d65238396cb5e95e046a53e7b5b75
+      size: 111353691
+    - path: src/training/train.py
+      hash: md5
+      md5: 0384b9b637fc27f2989c34cd6d1a2bc0
+      size: 5667
+    outs:
+    - path: pipelines/p4_aug_two_phase/results/phase2/convnext/history.json
+      hash: md5
+      md5: 8422bcfce8fc410a119dfce0dac68eab
+      size: 406
+    - path: pipelines/p4_aug_two_phase/results/phase2/convnext/loss_plot.png
+      hash: md5
+      md5: e139ad7e8cb427cdec750c827634e0f3
+      size: 135558
+    - path: pipelines/p4_aug_two_phase/results/phase2/convnext/model.pth
+      hash: md5
+      md5: 592f46278c78be984efc53bd1eb1c394
+      size: 111353691
+  evaluate@convnext:
+    cmd: "python -m src.training.evaluate  --model convnext  --weights pipelines/p4_aug_two_phase/results/phase2/convnext/model.pth\
+      \  --data data/deduplicated/test  --out pipelines/p4_aug_two_phase/results/phase2/convnext\n"
+    deps:
+    - path: data/deduplicated/test
+      hash: md5
+      md5: e277f2cfdcf62b1beb0b6b001ef2fe06.dir
+      size: 22636052
+      nfiles: 424
+    - path: pipelines/p4_aug_two_phase/results/phase2/convnext/model.pth
+      hash: md5
+      md5: 592f46278c78be984efc53bd1eb1c394
+      size: 111353691
+    - path: src/training/evaluate.py
+      hash: md5
+      md5: db1419d27e347e55732aecfba8a355fd
+      size: 4847
+    outs:
+    - path: 
+        pipelines/p4_aug_two_phase/results/phase2/convnext/classification_report.png
+      hash: md5
+      md5: ea0b3e35b938b3051b351418f4e21568
+      size: 165800
+    - path: 
+        pipelines/p4_aug_two_phase/results/phase2/convnext/confusion_matrix.png
+      hash: md5
+      md5: 406b2d1217ab5d8dcd3a9a11213bfa8f
+      size: 154835
+    - path: pipelines/p4_aug_two_phase/results/phase2/convnext/metrics.json
+      hash: md5
+      md5: 9862a9feaf18968661035d0fc6911185
+      size: 1757
+  train_phase1@effnet_v2_s:
+    cmd: "python -m src.training.train  --model effnet_v2_s  --train data/hybrid_balanced/train\
+      \  --val data/deduplicated/valid  --out pipelines/p4_aug_two_phase/results/phase1/effnet_v2_s\
+      \  --batch 16  --epochs 4\n"
+    deps:
+    - path: data/deduplicated/valid
+      hash: md5
+      md5: 4dcd942d3ef5398b1c4c275e82e79962.dir
+      size: 44487134
+      nfiles: 833
+    - path: data/hybrid_balanced/train
+      hash: md5
+      md5: 4130499bd8195b9b9e054c89589cf149.dir
+      size: 125506539
+      nfiles: 2340
+    - path: src/training/train.py
+      hash: md5
+      md5: 0384b9b637fc27f2989c34cd6d1a2bc0
+      size: 5667
+    outs:
+    - path: pipelines/p4_aug_two_phase/results/phase1/effnet_v2_s/loss_plot.png
+      hash: md5
+      md5: 1d80bfd278354ec2e0966b722fd81507
+      size: 141235
+    - path: pipelines/p4_aug_two_phase/results/phase1/effnet_v2_s/model.pth
+      hash: md5
+      md5: 9dfe05c92107b22b64e0ad61ccdd8fd5
+      size: 81596987
+  train_phase2@effnet_v2_s:
+    cmd: "python -m src.training.train  --model effnet_v2_s  --train data/augmented/train\
+      \  --val data/deduplicated/valid  --out pipelines/p4_aug_two_phase/results/phase2/effnet_v2_s\
+      \  --weights pipelines/p4_aug_two_phase/results/phase1/effnet_v2_s/model.pth
+      --batch 16  --epochs 6\n"
+    deps:
+    - path: data/augmented/train
+      hash: md5
+      md5: d2cd56c36bb30148efab96eee61575bf.dir
+      size: 322168700
+      nfiles: 5892
+    - path: data/deduplicated/valid
+      hash: md5
+      md5: 4dcd942d3ef5398b1c4c275e82e79962.dir
+      size: 44487134
+      nfiles: 833
+    - path: pipelines/p4_aug_two_phase/results/phase1/effnet_v2_s/model.pth
+      hash: md5
+      md5: 9dfe05c92107b22b64e0ad61ccdd8fd5
+      size: 81596987
+    - path: src/training/train.py
+      hash: md5
+      md5: 0384b9b637fc27f2989c34cd6d1a2bc0
+      size: 5667
+    outs:
+    - path: pipelines/p4_aug_two_phase/results/phase2/effnet_v2_s/history.json
+      hash: md5
+      md5: 5825813e259cfeecfa4cf497e3c8d175
+      size: 404
+    - path: pipelines/p4_aug_two_phase/results/phase2/effnet_v2_s/loss_plot.png
+      hash: md5
+      md5: 62082ea2f8dfc76840bda9b3b427ad6b
+      size: 137680
+    - path: pipelines/p4_aug_two_phase/results/phase2/effnet_v2_s/model.pth
+      hash: md5
+      md5: 648c49112fc87eed248904e9c9afc58b
+      size: 81596987
+  evaluate@effnet_v2_s:
+    cmd: "python -m src.training.evaluate  --model effnet_v2_s  --weights pipelines/p4_aug_two_phase/results/phase2/effnet_v2_s/model.pth\
+      \  --data data/deduplicated/test  --out pipelines/p4_aug_two_phase/results/phase2/effnet_v2_s\n"
+    deps:
+    - path: data/deduplicated/test
+      hash: md5
+      md5: e277f2cfdcf62b1beb0b6b001ef2fe06.dir
+      size: 22636052
+      nfiles: 424
+    - path: pipelines/p4_aug_two_phase/results/phase2/effnet_v2_s/model.pth
+      hash: md5
+      md5: 648c49112fc87eed248904e9c9afc58b
+      size: 81596987
+    - path: src/training/evaluate.py
+      hash: md5
+      md5: db1419d27e347e55732aecfba8a355fd
+      size: 4847
+    outs:
+    - path: 
+        pipelines/p4_aug_two_phase/results/phase2/effnet_v2_s/classification_report.png
+      hash: md5
+      md5: b4359c07b143cf976703385413d514c4
+      size: 156385
+    - path: 
+        pipelines/p4_aug_two_phase/results/phase2/effnet_v2_s/confusion_matrix.png
+      hash: md5
+      md5: e919b01da4a5d0062705ca5e199b0596
+      size: 154465
+    - path: pipelines/p4_aug_two_phase/results/phase2/effnet_v2_s/metrics.json
+      hash: md5
+      md5: c517d7fd47cb03c1e51256df481572e8
+      size: 1706
